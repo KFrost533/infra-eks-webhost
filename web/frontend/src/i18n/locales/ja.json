@@ -1,0 +1,61 @@
+{
+  "app": {
+    "title": "YouTube トレンドモニター",
+    "nav": {
+      "main": "メイン",
+      "settings": "設定"
+    }
+  },
+  "main": {
+    "searchPlaceholder": "キーワードを入力...",
+    "search": "検索",
+    "downloadCsv": "CSV ダウンロード",
+    "runNow": "今すぐ集計",
+    "columns": {
+      "title": "タイトル",
+      "channel": "チャンネル",
+      "publishedAt": "投稿日",
+      "url": "URL"
+    },
+    "stats": "登録キーワードの推移",
+    "totalHits": "総ヒット数: {{count}}（表示中: {{filteredCount}}）",
+    "filters": "結果を絞り込む",
+    "filterWord": "単語（タイトル・チャンネル）",
+    "filterWordPlaceholder": "含まれる単語を入力...",
+    "dateFrom": "投稿日（開始）",
+    "dateTo": "投稿日（終了）",
+    "clearFilters": "フィルターをクリア",
+    "empty": "結果がありません",
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました: {{message}}"
+  },
+  "settings": {
+    "youtubeApi": "YouTube API設定",
+    "apiKeyConfigured": "APIキーは設定済みです。変更する場合は新しいキーを入力してください。",
+    "apiKeyMissing": "APIキーが未設定です。YouTube Data API v3 のキーを設定してください。",
+    "apiKeyPlaceholder": "YouTube Data API v3 キー",
+    "language": "言語",
+    "smtp": "メール送信（SMTP）",
+    "smtpDescription": "SMTP接続情報を設定します。パスワードはサーバー側で暗号化して保存されます。",
+    "smtpHost": "SMTPホスト",
+    "smtpPort": "ポート",
+    "smtpUser": "ユーザー名",
+    "smtpPassword": "パスワード",
+    "smtpPasswordPlaceholder": "SMTPパスワード",
+    "smtpPasswordKeep": "変更しない場合は空欄",
+    "smtpFrom": "送信元メールアドレス",
+    "emails": "通知先メールアドレス",
+    "addEmail": "メールアドレスを追加",
+    "keywords": "監視キーワード",
+    "addKeyword": "キーワードを追加",
+    "add": "追加",
+    "delete": "削除",
+    "save": "保存",
+    "saved": "保存しました"
+  },
+  "lang": {
+    "ja": "日本語",
+    "en": "英語",
+    "de": "ドイツ語"
+  }
+}

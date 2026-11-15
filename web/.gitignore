@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+frontend/node_modules/
+
+# build outputs
+dist/
+build/
+creds/
+frontend/dist/
+backend/bin/
+
+# env
+.env
+backend/.env
+
+# db
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+backend/data.db
+
+# editors
+.vscode/
+.idea/
+*.log

@@ -1,0 +1,39 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - |
+        set -eu
+
+        command -v docker
+        command -v helm
+        test -f web/Dockerfile
+        test -f k8s/helm/website/Chart.yaml
+        case "$WEEKLY_REPORT_ENABLED" in true|false) ;; *) echo "Invalid weekly report setting." >&2; exit 1 ;; esac
+
+        printf '%s' "$CODEBUILD_RESOLVED_SOURCE_VERSION" | grep -Eq '^[0-9a-fA-F]{7,64}$'
+        build_id="${CODEBUILD_BUILD_ID##*:}"
+        printf '%s' "$build_id" | grep -Eq '^[0-9a-fA-F-]+$'
+        image_tag="$(printf '%s' "$CODEBUILD_RESOLVED_SOURCE_VERSION" | cut -c1-12)-$build_id"
+        ecr_registry="${ECR_REPOSITORY_URI%%/*}"
+        ecr_password="$(aws ecr get-login-password --region "$AWS_DEFAULT_REGION")"
+        printf '%s' "$ecr_password" | docker login \
+          --username AWS \
+          --password-stdin "$ecr_registry"
+        unset ecr_password
+
+        aws eks update-kubeconfig \
+          --region "$AWS_DEFAULT_REGION" \
+          --name "$CLUSTER_NAME"
+
+        docker build -t "$ECR_REPOSITORY_URI:$image_tag" web
+        docker push "$ECR_REPOSITORY_URI:$image_tag"
+
+        helm upgrade --install website ./k8s/helm/website \
+          --namespace "$WEBSITE_NAMESPACE" \
+          --set-string image.repository="$ECR_REPOSITORY_URI" \
+          --set-string image.tag="$image_tag" \
+          --set "weeklyReport.enabled=$WEEKLY_REPORT_ENABLED" \
+          --wait \
+          --timeout 5m

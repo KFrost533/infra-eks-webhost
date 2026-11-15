@@ -1,0 +1,61 @@
+{
+  "app": {
+    "title": "YouTube Trend Monitor",
+    "nav": {
+      "main": "Haupt",
+      "settings": "Einstellungen"
+    }
+  },
+  "main": {
+    "searchPlaceholder": "Stichwort eingeben...",
+    "search": "Suchen",
+    "downloadCsv": "CSV herunterladen",
+    "runNow": "Jetzt ausführen",
+    "columns": {
+      "title": "Titel",
+      "channel": "Kanal",
+      "publishedAt": "Veröffentlicht",
+      "url": "URL"
+    },
+    "stats": "Trends der registrierten Stichwörter",
+    "totalHits": "Gesamttreffer: {{count}} (angezeigt: {{filteredCount}})",
+    "filters": "Ergebnisse filtern",
+    "filterWord": "Wort (Titel oder Kanal)",
+    "filterWordPlaceholder": "Suchwort eingeben...",
+    "dateFrom": "Veröffentlicht ab",
+    "dateTo": "Veröffentlicht bis",
+    "clearFilters": "Filter löschen",
+    "empty": "Keine Ergebnisse",
+    "loading": "Lädt...",
+    "error": "Ein Fehler ist aufgetreten: {{message}}"
+  },
+  "settings": {
+    "youtubeApi": "YouTube-API-Einstellungen",
+    "apiKeyConfigured": "Ein API-Schlüssel ist eingerichtet. Geben Sie zum Ersetzen einen neuen ein.",
+    "apiKeyMissing": "Kein API-Schlüssel eingerichtet. Fügen Sie einen YouTube Data API v3-Schlüssel hinzu.",
+    "apiKeyPlaceholder": "YouTube Data API v3-Schlüssel",
+    "language": "Sprache",
+    "smtp": "E-Mail-Versand (SMTP)",
+    "smtpDescription": "SMTP-Verbindung einrichten. Das Passwort wird verschlüsselt auf dem Server gespeichert.",
+    "smtpHost": "SMTP-Host",
+    "smtpPort": "Port",
+    "smtpUser": "Benutzername",
+    "smtpPassword": "Passwort",
+    "smtpPasswordPlaceholder": "SMTP-Passwort",
+    "smtpPasswordKeep": "Leer lassen, um das aktuelle Passwort beizubehalten",
+    "smtpFrom": "Absender-E-Mail-Adresse",
+    "emails": "Benachrichtigungs-E-Mails",
+    "addEmail": "E-Mail hinzufügen",
+    "keywords": "Überwachte Stichwörter",
+    "addKeyword": "Stichwort hinzufügen",
+    "add": "Hinzufügen",
+    "delete": "Löschen",
+    "save": "Speichern",
+    "saved": "Gespeichert"
+  },
+  "lang": {
+    "ja": "Japanisch",
+    "en": "Englisch",
+    "de": "Deutsch"
+  }
+}

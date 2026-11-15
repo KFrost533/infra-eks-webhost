@@ -1,0 +1,61 @@
+{
+  "app": {
+    "title": "YouTube Trend Monitor",
+    "nav": {
+      "main": "Main",
+      "settings": "Settings"
+    }
+  },
+  "main": {
+    "searchPlaceholder": "Enter a keyword...",
+    "search": "Search",
+    "downloadCsv": "Download CSV",
+    "runNow": "Run now",
+    "columns": {
+      "title": "Title",
+      "channel": "Channel",
+      "publishedAt": "Published",
+      "url": "URL"
+    },
+    "stats": "Registered keyword trends",
+    "totalHits": "Total hits: {{count}} (showing: {{filteredCount}})",
+    "filters": "Filter results",
+    "filterWord": "Word (title or channel)",
+    "filterWordPlaceholder": "Enter a word to find...",
+    "dateFrom": "Published from",
+    "dateTo": "Published to",
+    "clearFilters": "Clear filters",
+    "empty": "No results",
+    "loading": "Loading...",
+    "error": "An error occurred: {{message}}"
+  },
+  "settings": {
+    "youtubeApi": "YouTube API settings",
+    "apiKeyConfigured": "An API key is configured. Enter a new key to replace it.",
+    "apiKeyMissing": "No API key is configured. Add a YouTube Data API v3 key.",
+    "apiKeyPlaceholder": "YouTube Data API v3 key",
+    "language": "Language",
+    "smtp": "Email delivery (SMTP)",
+    "smtpDescription": "Configure SMTP. The password is encrypted and stored on the server.",
+    "smtpHost": "SMTP host",
+    "smtpPort": "Port",
+    "smtpUser": "Username",
+    "smtpPassword": "Password",
+    "smtpPasswordPlaceholder": "SMTP password",
+    "smtpPasswordKeep": "Leave blank to keep the current password",
+    "smtpFrom": "Sender email address",
+    "emails": "Notification emails",
+    "addEmail": "Add email",
+    "keywords": "Monitored keywords",
+    "addKeyword": "Add keyword",
+    "add": "Add",
+    "delete": "Delete",
+    "save": "Save",
+    "saved": "Saved"
+  },
+  "lang": {
+    "ja": "Japanese",
+    "en": "English",
+    "de": "German"
+  }
+}

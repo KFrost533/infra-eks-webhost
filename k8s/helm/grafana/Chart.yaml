@@ -1,0 +1,25 @@
+apiVersion: v2
+name: website
+description: Website workload deployed to Amazon EKS Fargate
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+loki: 
+  enabled: true
+  image:
+    repository: grafana/loki
+    tag: "2.4.1"
+    pullPolicy: IfNotPresent
+grafana:
+  enabled: true
+  image:
+    repository: grafana/grafana
+    tag: "8.3.3"
+    pullPolicy: IfNotPresent
+alloy:
+  enabled: true
+  image:
+    repository: grafana/alloy
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+    # ECR Imageから取得する方式

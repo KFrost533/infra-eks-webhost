@@ -1,0 +1,22 @@
+name: Image Push
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repository:
+        description: Target Amazon ECR repository
+        type: string
+        default: grafana-repo
+      retrieval_from:
+        description: Source registry
+        type: string
+        default: ghcr.io:grafana:latest
+
+jobs:
+  image_push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
