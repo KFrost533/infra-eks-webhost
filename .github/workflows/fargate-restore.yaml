@@ -1,0 +1,46 @@
+name: Control EKS Fargate
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Start or stop Fargate workloads
+        type: choice
+        required: true
+        options:
+          - start
+          - stop
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  control:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.FARGATE_RESTORE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Send control request to EventBridge
+        env:
+          BUS_NAME: ${{ vars.FARGATE_CONTROL_BUS_NAME }}
+          OPERATION: ${{ inputs.operation }}
+        run: |
+          set -euo pipefail
+          test -n "$BUS_NAME"
+          case "$OPERATION" in
+            start) action=restore ;;
+            stop) action=stop ;;
+            *) echo "Invalid operation." >&2; exit 1 ;;
+          esac
+          request_id="$(python3 -c 'import uuid; print(uuid.uuid4())')"
+          entries="$(jq -nc --arg bus "$BUS_NAME" --arg action "$action" --arg id "$request_id" \
+            '[{EventBusName:$bus,Source:"fargate-control.github",DetailType:"fargate-control.request",Detail:({action:$action,requestId:$id}|tojson)}]')"
+          aws events put-events --entries "$entries" > response.json
+          jq -e '.FailedEntryCount == 0 and (.Entries | length) == 1 and (.Entries[0].EventId != null)' response.json >/dev/null
+          echo "Request $request_id accepted. Check CloudWatch logs and alarms for completion."
