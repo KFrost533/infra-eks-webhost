@@ -1,10 +1,6 @@
 data "aws_partition" "current" {}
 
-data "aws_eks_addon_version" "coredns" {
-  addon_name         = "coredns"
-  kubernetes_version = var.cluster_version
-  most_recent        = true
-}
+
 
 resource "aws_eks_cluster" "this" {
   name     = var.cluster_name
@@ -75,6 +71,16 @@ resource "aws_eks_fargate_profile" "website" {
   depends_on = [aws_eks_fargate_profile.system]
 }
 
+// ==== Addons ====
+// coredns, metrics-server, vpc-cni, kube-proxy
+
+// coredns
+data "aws_eks_addon_version" "coredns" {
+  addon_name         = "coredns"
+  kubernetes_version = var.cluster_version
+  most_recent        = true
+}
+
 resource "aws_eks_addon" "coredns" {
   cluster_name                = aws_eks_cluster.this.name
   addon_name                  = "coredns"
@@ -88,6 +94,7 @@ resource "aws_eks_addon" "coredns" {
   ]
 }
 
+// metrics-server
 data "aws_eks_addon_version" "metrics_server" {
   addon_name         = "metrics-server"
   kubernetes_version = var.cluster_version
@@ -98,6 +105,36 @@ resource "aws_eks_addon" "metrics_server" {
   cluster_name  = aws_eks_cluster.this.name
   addon_name    = "metrics-server"
   addon_version = data.aws_eks_addon_version.metrics_server.version
+
+  depends_on = [aws_eks_fargate_profile.system]
+}
+
+// vpc-cni
+data "aws_eks_addon_version" "vpc_cni" {
+  addon_name         = "vpc-cni"
+  kubernetes_version = var.cluster_version
+  most_recent        = true
+}
+
+resource "aws_eks_addon" "vpc_cni" {
+  cluster_name  = aws_eks_cluster.this.name
+  addon_name    = "vpc-cni"
+  addon_version = data.aws_eks_addon_version.vpc_cni.version
+
+  depends_on = [aws_eks_fargate_profile.system]
+}
+
+// kube-proxy
+data "aws_eks_addon_version" "kube_proxy" {
+  addon_name         = "kube-proxy"
+  kubernetes_version = var.cluster_version
+  most_recent        = true
+}
+
+resource "aws_eks_addon" "kube_proxy" {
+  cluster_name  = aws_eks_cluster.this.name
+  addon_name    = "kube-proxy"
+  addon_version = data.aws_eks_addon_version.kube_proxy.version
 
   depends_on = [aws_eks_fargate_profile.system]
 }

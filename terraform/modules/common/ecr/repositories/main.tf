@@ -1,3 +1,4 @@
+// My own application that handles youtube data
 resource "aws_ecr_repository" "website" {
   name                 = "${var.project_name}-website"
   image_tag_mutability = "IMMUTABLE"
@@ -22,38 +23,6 @@ resource "aws_ecr_lifecycle_policy" "website" {
         tagStatus   = "any"
         countType   = "imageCountMoreThan"
         countNumber = 20
-      }
-      action = {
-        type = "expire"
-      }
-    }]
-  })
-}
-
-resource "aws_ecr_repository" "build_tools" {
-  name                 = "${var.project_name}-build-tools"
-  image_tag_mutability = "IMMUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  encryption_configuration {
-    encryption_type = "AES256"
-  }
-}
-
-resource "aws_ecr_lifecycle_policy" "build_tools" {
-  repository = aws_ecr_repository.build_tools.name
-
-  policy = jsonencode({
-    rules = [{
-      rulePriority = 1
-      description  = "Keep the most recent 5 build tool images"
-      selection = {
-        tagStatus   = "any"
-        countType   = "imageCountMoreThan"
-        countNumber = 5
       }
       action = {
         type = "expire"

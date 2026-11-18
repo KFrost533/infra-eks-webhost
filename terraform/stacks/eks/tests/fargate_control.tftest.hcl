@@ -127,7 +127,7 @@ run "enable_control" {
 run "lambda_monitoring" {
   command = plan
   module {
-    source = "../../modules/alerts/lambda"
+    source = "../../modules/common/alerts/lambda"
   }
   variables {
     function_name    = "project-fargate-control"

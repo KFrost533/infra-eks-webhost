@@ -5,12 +5,11 @@ The infrastructure is organised as local Terraform modules:
 | Module | Responsibility |
 |---|---|
 | `eks` | EKS cluster, Fargate profiles, add-ons and optional Fargate control |
-| `ecr` | Website and private CodeBuild tools image repositories |
-| `common` | Shared networking, IAM, log groups, CodeBuild and GitHub connection |
-| `alerts` | Lambda monitoring and SNS alert topic |
+| `common` | Networking, IAM, log groups, ECR, CodeBuild, GitHub connection and alerts |
 
 The shared root in `terraform\stacks\main` and the EKS root in `terraform\stacks\eks` use separate
-Terraform states. The module directories are only source-code groupings.
+Terraform states. Module directories group functionality, not resource lifetime:
+for example, `common/network` is created and destroyed by the EKS stack.
 
 The intended release flow is:
 

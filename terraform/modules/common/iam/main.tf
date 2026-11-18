@@ -112,7 +112,7 @@ resource "aws_iam_role_policy" "ecr_push" {
       Action = [
         "ecr:PutImage",
       ]
-      Resource = "arn:aws:ecr:us-east-1:204806963442:repository/*"
+      Resource = "arn:aws:ecr:ap-southeast-2:204806963442:repository/*"
     }]
   })
 }

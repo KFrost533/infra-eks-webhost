@@ -71,13 +71,13 @@ module "codebuild_policy" {
 
 module "lambda_alerts" {
   count  = var.enable_fargate_control ? 1 : 0
-  source = "../../modules/alerts/sns"
+  source = "../../modules/common/alerts/sns"
 
   project_name = var.project_name
 }
 
 module "ecr" {
-  source = "../../modules/ecr/repositories"
+  source = "../../modules/common/ecr/repositories"
 
   project_name = var.project_name
 }
