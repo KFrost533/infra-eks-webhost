@@ -30,8 +30,8 @@ output "eks_shared" {
     github_oidc_provider_arn       = module.iam.github_oidc_provider_arn
     codebuild_log_group_arn        = module.cloudwatch.codebuild_log_group_arn
     codebuild_log_group_name       = module.cloudwatch.codebuild_log_group_name
-    fargate_log_group_name         = module.cloudwatch.fargate_log_group_name
-    fargate_control_log_group_name = module.cloudwatch.fargate_control_log_group_name
+    fargate_log_group_name         = module.fargate_logs.fargate_log_group_name
+    fargate_control_log_group_name = module.fargate_logs.fargate_control_log_group_name
     github_connection_arn          = module.github_connection.arn
     ecr_repository_arn             = module.ecr.repository_arn
     ecr_repository_url             = module.ecr.repository_url

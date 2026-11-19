@@ -40,16 +40,6 @@ variable "enable_weekly_report" {
   default     = false
 }
 
-variable "build_tools_repository_url" {
-  description = "ECR repository URL containing the private CodeBuild environment image."
-  type        = string
-}
-
-variable "build_tools_image_tag" {
-  description = "Immutable tag of the prebuilt CodeBuild environment image."
-  type        = string
-}
-
 variable "codebuild_role_arn" {
   description = "IAM role ARN assumed by CodeBuild."
   type        = string

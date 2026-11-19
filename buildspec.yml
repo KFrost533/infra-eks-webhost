@@ -1,6 +1,21 @@
 version: 0.2
 
 phases:
+  install:
+    commands:
+      - |
+        set -eu
+        workdir="$(mktemp -d)"
+        trap 'rm -rf "$workdir"' EXIT
+        archive="helm-v3.17.3-linux-amd64.tar.gz"
+        curl --fail --silent --show-error --location \
+          "https://get.helm.sh/$archive" --output "$workdir/$archive"
+        printf '%s  %s\n' \
+          "ee88b3c851ae6466a3de507f7be73fe94d54cbf2987cbaa3d1a3832ea331f2cd" \
+          "$workdir/$archive" | sha256sum --check
+        tar --extract --gzip --file "$workdir/$archive" --directory "$workdir"
+        install --mode 0755 "$workdir/linux-amd64/helm" /usr/local/bin/helm
+        helm version --short
   build:
     commands:
       - |

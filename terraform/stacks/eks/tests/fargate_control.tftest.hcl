@@ -28,33 +28,38 @@ mock_provider "aws" {
 
 mock_provider "archive" {}
 
-variables {
-  shared = {
-    account_id                     = "123456789012"
-    aws_region                     = "ap-southeast-1"
-    project_name                   = "project"
-    environment                    = "test"
-    cluster_name                   = "project"
-    website_repository_url         = "https://github.com/KFrost533/infra-eks-webhost"
-    enable_fargate_control         = false
-    eks_cluster_role_arn           = "arn:aws:iam::123456789012:role/eks"
-    fargate_pod_execution_role_arn = "arn:aws:iam::123456789012:role/fargate"
-    codebuild_role_arn             = "arn:aws:iam::123456789012:role/codebuild"
-    codebuild_role_name            = "codebuild"
-    github_oidc_provider_arn       = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
-    codebuild_log_group_arn        = "arn:aws:logs:ap-southeast-1:123456789012:log-group:codebuild"
-    codebuild_log_group_name       = "codebuild"
-    fargate_log_group_name         = "fargate"
-    fargate_control_log_group_name = "/aws/lambda/project-fargate-control"
-    github_connection_arn          = "arn:aws:codeconnections:ap-southeast-1:123456789012:connection/test"
-    ecr_repository_arn             = "arn:aws:ecr:ap-southeast-1:123456789012:repository/website"
-    ecr_repository_url             = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/website"
-    build_tools_repository_arn     = "arn:aws:ecr:ap-southeast-1:123456789012:repository/build-tools"
-    build_tools_repository_url     = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/build-tools"
-    fargate_control_role_arn       = null
-    fargate_scheduler_role_arn     = null
-    fargate_restore_role_arn       = null
-    lambda_alerts_topic_arn        = null
+override_data {
+  target = data.terraform_remote_state.main
+  values = {
+    outputs = {
+      eks_shared = {
+        account_id                     = "123456789012"
+        aws_region                     = "ap-southeast-1"
+        project_name                   = "project"
+        environment                    = "test"
+        cluster_name                   = "project"
+        website_repository_url         = "https://github.com/KFrost533/infra-eks-webhost"
+        enable_fargate_control         = false
+        eks_cluster_role_arn           = "arn:aws:iam::123456789012:role/eks"
+        fargate_pod_execution_role_arn = "arn:aws:iam::123456789012:role/fargate"
+        codebuild_role_arn             = "arn:aws:iam::123456789012:role/codebuild"
+        codebuild_role_name            = "codebuild"
+        github_oidc_provider_arn       = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+        codebuild_log_group_arn        = "arn:aws:logs:ap-southeast-1:123456789012:log-group:codebuild"
+        codebuild_log_group_name       = "codebuild"
+        fargate_log_group_name         = "fargate"
+        fargate_control_log_group_name = "/aws/lambda/project-fargate-control"
+        github_connection_arn          = "arn:aws:codeconnections:ap-southeast-1:123456789012:connection/test"
+        ecr_repository_arn             = "arn:aws:ecr:ap-southeast-1:123456789012:repository/website"
+        ecr_repository_url             = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/website"
+        build_tools_repository_arn     = "arn:aws:ecr:ap-southeast-1:123456789012:repository/build-tools"
+        build_tools_repository_url     = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/build-tools"
+        fargate_control_role_arn       = null
+        fargate_scheduler_role_arn     = null
+        fargate_restore_role_arn       = null
+        lambda_alerts_topic_arn        = null
+      }
+    }
   }
 }
 
@@ -73,38 +78,43 @@ run "disabled_by_default" {
 
 run "enable_control" {
   command = plan
-  variables {
-    shared = {
-      account_id                     = "123456789012"
-      aws_region                     = "ap-southeast-1"
-      project_name                   = "project"
-      environment                    = "test"
-      cluster_name                   = "project"
-      website_repository_url         = "https://github.com/KFrost533/infra-eks-webhost"
-      enable_fargate_control         = true
-      eks_cluster_role_arn           = "arn:aws:iam::123456789012:role/eks"
-      fargate_pod_execution_role_arn = "arn:aws:iam::123456789012:role/fargate"
-      codebuild_role_arn             = "arn:aws:iam::123456789012:role/codebuild"
-      codebuild_role_name            = "codebuild"
-      github_oidc_provider_arn       = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
-      codebuild_log_group_arn        = "arn:aws:logs:ap-southeast-1:123456789012:log-group:codebuild"
-      codebuild_log_group_name       = "codebuild"
-      fargate_log_group_name         = "fargate"
-      fargate_control_log_group_name = "/aws/lambda/project-fargate-control"
-      github_connection_arn          = "arn:aws:codeconnections:ap-southeast-1:123456789012:connection/test"
-      ecr_repository_arn             = "arn:aws:ecr:ap-southeast-1:123456789012:repository/website"
-      ecr_repository_url             = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/website"
-      build_tools_repository_arn     = "arn:aws:ecr:ap-southeast-1:123456789012:repository/build-tools"
-      build_tools_repository_url     = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/build-tools"
-      fargate_control_role_arn       = "arn:aws:iam::123456789012:role/fargate-control"
-      fargate_scheduler_role_arn     = "arn:aws:iam::123456789012:role/scheduler"
-      fargate_restore_role_arn       = "arn:aws:iam::123456789012:role/restore"
-      lambda_alerts_topic_arn        = "arn:aws:sns:ap-southeast-1:123456789012:project-lambda-alerts"
+  override_data {
+    target = data.terraform_remote_state.main
+    values = {
+      outputs = {
+        eks_shared = {
+          account_id                     = "123456789012"
+          aws_region                     = "ap-southeast-1"
+          project_name                   = "project"
+          environment                    = "test"
+          cluster_name                   = "project"
+          website_repository_url         = "https://github.com/KFrost533/infra-eks-webhost"
+          enable_fargate_control         = true
+          eks_cluster_role_arn           = "arn:aws:iam::123456789012:role/eks"
+          fargate_pod_execution_role_arn = "arn:aws:iam::123456789012:role/fargate"
+          codebuild_role_arn             = "arn:aws:iam::123456789012:role/codebuild"
+          codebuild_role_name            = "codebuild"
+          github_oidc_provider_arn       = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+          codebuild_log_group_arn        = "arn:aws:logs:ap-southeast-1:123456789012:log-group:codebuild"
+          codebuild_log_group_name       = "codebuild"
+          fargate_log_group_name         = "fargate"
+          fargate_control_log_group_name = "/aws/lambda/project-fargate-control"
+          github_connection_arn          = "arn:aws:codeconnections:ap-southeast-1:123456789012:connection/test"
+          ecr_repository_arn             = "arn:aws:ecr:ap-southeast-1:123456789012:repository/website"
+          ecr_repository_url             = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/website"
+          build_tools_repository_arn     = "arn:aws:ecr:ap-southeast-1:123456789012:repository/build-tools"
+          build_tools_repository_url     = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/build-tools"
+          fargate_control_role_arn       = "arn:aws:iam::123456789012:role/fargate-control"
+          fargate_scheduler_role_arn     = "arn:aws:iam::123456789012:role/scheduler"
+          fargate_restore_role_arn       = "arn:aws:iam::123456789012:role/restore"
+          lambda_alerts_topic_arn        = "arn:aws:sns:ap-southeast-1:123456789012:project-lambda-alerts"
+        }
+      }
     }
   }
 
   assert {
-    condition     = module.fargate_control[0].function_name == "${var.shared.project_name}-fargate-control"
+    condition     = module.fargate_control[0].function_name == "${local.shared.project_name}-fargate-control"
     error_message = "The Fargate control function was not created."
   }
 
@@ -114,12 +124,12 @@ run "enable_control" {
   }
 
   assert {
-    condition     = module.fargate_control_bus[0].rule_names == { stop = "${var.shared.project_name}-fargate-stop", restore = "${var.shared.project_name}-fargate-restore" }
+    condition     = module.fargate_control_bus[0].rule_names == { stop = "${local.shared.project_name}-fargate-stop", restore = "${local.shared.project_name}-fargate-restore" }
     error_message = "The control bus must route stop and restore requests."
   }
 
   assert {
-    condition     = length(module.fargate_control_monitoring) == 1 && output.lambda_alerts_topic_arn == var.shared.lambda_alerts_topic_arn
+    condition     = length(module.fargate_control_monitoring) == 1 && output.lambda_alerts_topic_arn == local.shared.lambda_alerts_topic_arn
     error_message = "Lambda monitoring must use the shared SNS topic."
   }
 }
@@ -127,8 +137,9 @@ run "enable_control" {
 run "lambda_monitoring" {
   command = plan
   module {
-    source = "../../modules/common/alerts/lambda"
+    source = "../../modules/eks/fargate-control/cloudwatch/alarm"
   }
+
   variables {
     function_name    = "project-fargate-control"
     log_group_name   = "/aws/lambda/project-fargate-control"
@@ -151,5 +162,50 @@ run "lambda_monitoring" {
   assert {
     condition     = toset(aws_cloudwatch_composite_alarm.notification.alarm_actions) == toset([var.sns_topic_arn])
     error_message = "The composite alarm must notify the SNS topic."
+  }
+}
+
+run "fargate_logs_enabled" {
+  command = plan
+  module {
+    source = "../../modules/eks/fargate-control/cloudwatch/log"
+  }
+
+  variables {
+    project_name           = "project"
+    cluster_name           = "cluster"
+    enable_fargate_control = true
+  }
+
+  assert {
+    condition     = output.fargate_control_log_group_name == "/aws/lambda/project-fargate-control" && output.fargate_log_group_name == "/aws/eks/cluster/fargate"
+    error_message = "The shared Fargate log module must expose the expected log groups."
+  }
+}
+
+run "managed_codebuild_image" {
+  command = plan
+  module {
+    source = "../../modules/common/codebuild"
+  }
+  variables {
+    project_name                = "project"
+    aws_region                  = "ap-southeast-2"
+    repository_url              = "https://github.com/example/project"
+    github_connection_arn       = "arn:aws:codeconnections:ap-southeast-2:123456789012:connection/test"
+    repository_branch           = "main"
+    buildspec_path              = "buildspec.yml"
+    codebuild_role_arn          = "arn:aws:iam::123456789012:role/codebuild"
+    vpc_id                      = "vpc-12345678"
+    private_subnet_ids          = ["subnet-12345678"]
+    codebuild_security_group_id = "sg-12345678"
+    ecr_repository_url          = "123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/website"
+    eks_cluster_name            = "project"
+    cloudwatch_log_group_name   = "/aws/codebuild/project"
+  }
+
+  assert {
+    condition     = aws_codebuild_project.this.environment[0].image == "aws/codebuild/standard:7.0" && aws_codebuild_project.this.environment[0].image_pull_credentials_type == "CODEBUILD"
+    error_message = "CodeBuild must use an AWS-managed image and CodeBuild credentials."
   }
 }

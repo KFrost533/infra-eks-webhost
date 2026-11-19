@@ -70,8 +70,6 @@ module "codebuild" {
   buildspec_path              = var.buildspec_path
   enable_github_webhook       = var.enable_github_webhook
   enable_weekly_report        = var.enable_weekly_report
-  build_tools_repository_url  = local.shared.build_tools_repository_url
-  build_tools_image_tag       = var.build_tools_image_tag
   codebuild_role_arn          = local.shared.codebuild_role_arn
   vpc_id                      = module.network.vpc_id
   private_subnet_ids          = module.network.private_subnet_ids
@@ -128,7 +126,7 @@ module "fargate_control_bus" {
 
 module "fargate_control_monitoring" {
   count  = local.shared.enable_fargate_control ? 1 : 0
-  source = "../../modules/common/alerts/lambda"
+  source = "../../modules/eks/fargate-control/cloudwatch/alarm"
 
   function_name    = module.fargate_control[0].function_name
   log_group_name   = local.shared.fargate_control_log_group_name
@@ -143,7 +141,7 @@ module "fargate_control_schedule" {
   source = "../../modules/eks/fargate-control/eventbridge"
 
   project_name       = local.shared.project_name
-  schedule_enabled   = local.shared.enable_fargate_stop_schedule
+  schedule_enabled   = var.enable_fargate_stop_schedule
   stop_alias_arn     = module.fargate_control[0].stop_alias_arn
   scheduler_role_arn = local.shared.fargate_scheduler_role_arn
 

@@ -29,7 +29,13 @@ locals {
 }
 
 module "cloudwatch" {
-  source = "../../modules/common/cloudwatch"
+  source = "../../modules/common/cloudwatch/log"
+
+  project_name = var.project_name
+}
+
+module "fargate_logs" {
+  source = "../../modules/eks/fargate-control/cloudwatch/log"
 
   project_name           = var.project_name
   cluster_name           = var.cluster_name
@@ -41,7 +47,7 @@ module "iam" {
 
   project_name          = var.project_name
   cluster_name          = var.cluster_name
-  fargate_log_group_arn = module.cloudwatch.fargate_log_group_arn
+  fargate_log_group_arn = module.fargate_logs.fargate_log_group_arn
 }
 
 module "fargate_control_iam" {
@@ -71,13 +77,13 @@ module "codebuild_policy" {
 
 module "lambda_alerts" {
   count  = var.enable_fargate_control ? 1 : 0
-  source = "../../modules/common/alerts/sns"
+  source = "../../modules/common/sns"
 
   project_name = var.project_name
 }
 
 module "ecr" {
-  source = "../../modules/common/ecr/repositories"
+  source = "../../modules/common/ecr"
 
   project_name = var.project_name
 }

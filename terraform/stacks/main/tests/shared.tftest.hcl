@@ -35,7 +35,6 @@ run "shared_resources" {
     condition     = local.cluster_arn == "arn:aws:eks:${var.aws_region}:123456789012:cluster/${var.cluster_name}"
     error_message = "The shared policy must target the EKS cluster ARN without creating the cluster."
   }
-
 }
 
 run "shared_fargate_control" {

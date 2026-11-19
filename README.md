@@ -10,6 +10,15 @@ The infrastructure is organised as local Terraform modules:
 The shared root in `terraform\stacks\main` and the EKS root in `terraform\stacks\eks` use separate
 Terraform states. Module directories group functionality, not resource lifetime:
 for example, `common/network` is created and destroyed by the EKS stack.
+The Fargate control CloudWatch log module is managed by the main stack to
+retain logs when EKS is destroyed; its alarm module is managed by the EKS
+stack. Existing log groups are mapped to their new module addresses with
+Terraform `moved` blocks; review the plan before applying.
+
+Shared configuration (region, project, cluster name and repository URL) is
+defined in the main stack. EKS-only settings such as cluster version, VPC
+CIDR and schedules belong in the EKS stack. EKS reads the main stack's
+`eks_shared` output from its local state file.
 
 The intended release flow is:
 
@@ -66,22 +75,23 @@ terraform -chdir=terraform\stacks\main plan
 terraform -chdir=terraform\stacks\main apply
 ```
 
-Authorize the GitHub connection in AWS and push the private CodeBuild tools
-image before deploying workloads. When EKS is needed, pass the current shared
-output to the EKS root in the same PowerShell session:
+Authorize the GitHub connection in AWS before deploying workloads.
+The EKS root reads `eks_shared` from
+`terraform\stacks\main\terraform.tfstate` automatically:
 
 ```powershell
-$env:TF_VAR_shared = terraform -chdir=terraform\stacks\main output -json eks_shared
-if ($LASTEXITCODE -ne 0) { throw "Failed to read shared outputs." }
 terraform -chdir=terraform\stacks\eks init
 terraform -chdir=terraform\stacks\eks validate
 terraform -chdir=terraform\stacks\eks plan
 terraform -chdir=terraform\stacks\eks apply
 ```
 
-Refresh `TF_VAR_shared` after every shared apply and in each new shell before
-running EKS plan, apply or destroy. Both roots must use the same AWS account;
-the EKS provider checks the account and region from the shared output. Keep
+Apply the main stack before planning, applying or destroying the EKS stack,
+and keep its local state file available. Access to this file also gives access
+to the entire main state, so protect it accordingly. Remote backends or other
+state paths require a corresponding change to the EKS data source.
+Both roots must use the same AWS account and region; the EKS provider checks
+the account against the shared output. Keep
 the shared resources in place while the EKS stack exists. Do not destroy shared
 IAM, ECR or the connection first. Shared IAM, log storage, ECR images and other
 remaining resources can still incur charges. Turning off
@@ -90,7 +100,7 @@ the logs in it; review this change and its impact on the running EKS stack.
 
 ### Remove and recreate EKS
 
-To stop EKS and NAT charges, refresh `TF_VAR_shared`, review
+To stop EKS and NAT charges, review
 `terraform -chdir=terraform\stacks\eks plan -destroy`, then run
 `terraform -chdir=terraform\stacks\eks destroy`. This destroys the cluster, VPC,
 NAT, endpoints, CodeBuild project, Lambda, EventBridge and CloudWatch alarms,
@@ -194,7 +204,7 @@ To configure:
    Set-Location ..\..\..\..\..
    ```
    Repeat the build before applying changes to the Lambda source. The generated `dist` bundle is not committed.
-2. Set `enable_fargate_control = true` in `terraform\stacks\main\terraform.tfvars`, apply the shared root and refresh `TF_VAR_shared`. This creates IAM and the SNS topic. Leave `enable_fargate_stop_schedule = false` in `terraform\stacks\eks\terraform.tfvars`, then review and apply the EKS plan for the Lambda, network access, event bus, alarms and a **disabled** schedule. The Lambda needs VPC NAT access to the regional EKS API and uses the existing STS endpoint.
+2. Set `enable_fargate_control = true` in `terraform\stacks\main\terraform.tfvars` and apply the shared root. This creates IAM and the SNS topic. Leave `enable_fargate_stop_schedule = false` in `terraform\stacks\eks\terraform.tfvars`, then review and apply the EKS plan for the Lambda, network access, event bus, alarms and a **disabled** schedule. The Lambda needs VPC NAT access to the regional EKS API and uses the existing STS endpoint.
 3. Using an administrator kubeconfig for the target cluster, apply `kubectl apply -f terraform\modules\eks\fargate-control\lambda\scaler-rbac.yaml` from the repository root. This grants the Lambda's EKS access-entry group cluster-wide list/patch/delete permissions, separate from IAM. Review the manifest and verify the target cluster first.
 4. In the SNS console, create an email subscription to the topic shown by `terraform -chdir=terraform\stacks\eks output -raw lambda_alerts_topic_arn` and confirm it using the link in the email. Notifications are not delivered before confirmation.
 5. In GitHub repository settings, set secret `FARGATE_RESTORE_ROLE_ARN` to `terraform -chdir=terraform\stacks\eks output -raw fargate_restore_role_arn`, and variables `AWS_REGION` to the deployment region and `FARGATE_CONTROL_BUS_NAME` to `terraform -chdir=terraform\stacks\eks output -raw fargate_control_bus_name`. Only the configured repository's `main` branch can assume the role; it can send matching events to the control bus, not invoke Lambda directly. Protect the main branch and workflow.
@@ -235,14 +245,13 @@ The job has no automatic retry after a failed attempt because SES may have accep
 
 Keep `enable_github_webhook = false` and do not deploy until the MongoDB connection and secret provisioning are verified. The repository, application, buildspec and chart are intended to live together in `KFrost533/infra-eks-webhost` on the `main` branch. Create the repository and review all staged files before pushing; the ignore files are safeguards, not a substitute for checking for secrets and private data.
 
-The CodeBuild project uses a private ECR build image containing Helm. Once infrastructure is approved and created, build and push that tools image from a workstation with Docker and internet access:
-
-```powershell
-Set-Location <repository-root>
-.\tools\push-codebuild-image.ps1
-```
-
-Then:
+The CodeBuild project uses the AWS-managed `aws/codebuild/standard:7.0`
+image. During each build it downloads Helm 3.17.3 from `get.helm.sh` and
+verifies its pinned SHA-256 hash, so builds require outbound HTTPS access.
+The existing build-tools ECR repository and lifecycle policy remain managed by
+the main stack for retention, but CodeBuild no longer uses their image.
+The CodeBuild role retains permission to pull that image so an existing
+project continues to work until the EKS stack is updated.
 
 1. Authorise the pending GitHub CodeConnections connection in the AWS Console and grant it access to the combined repository.
 2. Configure the Fargate log router and create the `website` namespace using an administrator kubeconfig. The CodeBuild role is intentionally limited to editing resources in that namespace.

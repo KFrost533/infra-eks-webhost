@@ -50,12 +50,6 @@ variable "enable_weekly_report" {
   default     = false
 }
 
-variable "build_tools_image_tag" {
-  description = "Immutable tag for the private CodeBuild tools image."
-  type        = string
-  default     = "tools-v1"
-}
-
 variable "enable_fargate_stop_schedule" {
   description = "Enable daily 17:00 JST Fargate shutdown after RBAC and recovery have been tested."
   type        = bool
