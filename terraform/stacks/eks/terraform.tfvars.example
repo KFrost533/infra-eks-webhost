@@ -1,3 +1,3 @@
 cluster_admin_cidrs = ["YOUR_PUBLIC_IP/32"]
-enable_github_webhook = false
+enable_github_webhook = true
 enable_weekly_report  = false

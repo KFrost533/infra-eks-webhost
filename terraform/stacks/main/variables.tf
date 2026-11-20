@@ -29,7 +29,7 @@ variable "enable_fargate_control" {
 }
 
 variable "website_repository_url" {
-  description = "GitHub HTTPS URL for the website source for CodeBuild."
+  description = "GitHub HTTPS repository URL trusted by the Fargate control GitHub Actions role."
   type        = string
   default     = "https://github.com/KFrost533/infra-eks-webhost"
 

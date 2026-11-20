@@ -52,3 +52,4 @@ run "shared_fargate_control" {
     error_message = "Fargate control IAM and SNS must be in the shared stack."
   }
 }
+

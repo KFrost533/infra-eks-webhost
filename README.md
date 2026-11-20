@@ -15,10 +15,11 @@ retain logs when EKS is destroyed; its alarm module is managed by the EKS
 stack. Existing log groups are mapped to their new module addresses with
 Terraform `moved` blocks; review the plan before applying.
 
-Shared configuration (region, project, cluster name and repository URL) is
-defined in the main stack. EKS-only settings such as cluster version, VPC
-CIDR and schedules belong in the EKS stack. EKS reads the main stack's
-`eks_shared` output from its local state file.
+Shared configuration (region, project and cluster name) is defined in the
+main stack. Defaults for EKS-only settings such as cluster version, VPC CIDR,
+and schedules live in their respective modules' `variables.tf` files. Set
+variables in the EKS stack's `terraform.tfvars` to override those defaults.
+EKS reads the main stack's `eks_shared` output from its local state file.
 
 The intended release flow is:
 
@@ -59,8 +60,13 @@ Replace `YOUR_PUBLIC_IP/32` in `terraform\stacks\eks\terraform.tfvars` with the
 operator's public IPv4 CIDR. The shared root creates ECR, the GitHub connection,
 IAM roles, CodeBuild policy and log groups, plus Fargate control IAM and SNS
 when enabled; it does not create EKS, VPC, NAT or the CodeBuild project.
-Configure `website_repository_url` in the shared root so the CodeBuild source
-and GitHub OIDC trust target the same repository.
+The CodeBuild module reads its repository URL from the existing SSM Parameter
+Store `String` parameter `/eks/video-platform-app` in the EKS stack's AWS
+region. It must contain a GitHub HTTPS repository URL; the Terraform caller
+needs permission to read it. After changing the parameter, review and apply
+the EKS plan to update the project. The separate `website_repository_url`
+input controls the repository trusted by the Fargate control GitHub Actions
+role; changing the CodeBuild source does not change that trust.
 It looks up an existing GitHub Actions IAM OIDC provider in the same AWS
 account; create or manage that provider separately before planning. It is not
 created, modified or deleted by this stack. If an earlier state already manages
@@ -166,8 +172,8 @@ the shared state. Use `module.codebuild_policy` for the policy and quote the
 instance addresses `'module.fargate_control_iam[0]'` and
 `'module.lambda_alerts[0]'` when present. Check both plans before applying.
 Do not recreate the SNS
-topic or its subscriptions. If `website_repository_url` was configured in the
-EKS tfvars, move that setting to the shared tfvars before applying.
+topic or its subscriptions. The CodeBuild source is now read from SSM;
+`website_repository_url` in the shared root controls Fargate control IAM trust.
 
 EKS control plane, NAT Gateway, interface endpoints, Fargate, ALB and data
 transfer can incur charges. Review costs and complete plans before applying.
@@ -243,7 +249,13 @@ The job has no automatic retry after a failed attempt because SES may have accep
 
 ## Prepare CI
 
-Keep `enable_github_webhook = false` and do not deploy until the MongoDB connection and secret provisioning are verified. The repository, application, buildspec and chart are intended to live together in `KFrost533/infra-eks-webhost` on the `main` branch. Create the repository and review all staged files before pushing; the ignore files are safeguards, not a substitute for checking for secrets and private data.
+Pushes to `main` in the repository named by `/eks/video-platform-app` trigger
+CodeBuild and deploy to EKS by default. To postpone automatic deployment until MongoDB connectivity
+and secret provisioning are verified, set `enable_github_webhook = false` in
+`terraform\stacks\eks\terraform.tfvars` before applying. The repository,
+application, buildspec and chart must be present in that repository; review all
+staged files before pushing. Ignore files are not a substitute for checking
+for secrets and private data.
 
 The CodeBuild project uses the AWS-managed `aws/codebuild/standard:7.0`
 image. During each build it downloads Helm 3.17.3 from `get.helm.sh` and
@@ -253,10 +265,10 @@ the main stack for retention, but CodeBuild no longer uses their image.
 The CodeBuild role retains permission to pull that image so an existing
 project continues to work until the EKS stack is updated.
 
-1. Authorise the pending GitHub CodeConnections connection in the AWS Console and grant it access to the combined repository.
+1. Authorise the pending GitHub CodeConnections connection in the AWS Console, grant the GitHub App access to the repository, and approve its webhook permissions.
 2. Configure the Fargate log router and create the `website` namespace using an administrator kubeconfig. The CodeBuild role is intentionally limited to editing resources in that namespace.
 3. Configure MongoDB access and backups, and provision a Kubernetes Secret named `website-secrets` in the `website` namespace with keys `ACCESS_MONGODB_URI` and `API_KEY_ENCRYPTION_KEY`. Use a secure secret-management process; do not commit values or put them in Helm values or Terraform state. Keep the encryption key stable.
-4. After the application and deployment are verified, set `enable_github_webhook = true` in `terraform\stacks\eks\terraform.tfvars`, review the plan, and apply it. Every push to `main` will trigger a build.
+4. After the application and deployment are verified, enable `enable_github_webhook` if it was disabled, review the EKS plan, and apply it. Each push to `main` triggers a build and deployment. Set it to `false` and apply to stop the webhook.
 
 The buildspec builds and pushes an image tagged with the source commit and unique build ID, then runs `helm upgrade --install`. Concurrent builds or retries can deploy an older commit after a newer one. A CodeBuild project concurrency limit of one is not a queue: additional builds are rejected while one runs. Design and verify deployment ordering and retry handling before enabling automated releases. The Helm chart deploys to Fargate Pods. Public access requires the AWS Load Balancer Controller to be installed and the chart Ingress enabled after the controller is ready.
 

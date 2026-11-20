@@ -3,7 +3,9 @@ variable "project_name" {
 }
 
 variable "schedule_enabled" {
-  type = bool
+  type     = bool
+  default  = false
+  nullable = false
 }
 
 variable "stop_alias_arn" {

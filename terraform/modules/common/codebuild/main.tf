@@ -1,5 +1,10 @@
 data "aws_caller_identity" "current" {}
 
+data "aws_ssm_parameter" "repository_url" {
+  name            = "/eks/video-platform-app"
+  with_decryption = false
+}
+
 resource "aws_codebuild_project" "this" {
   name          = var.project_name
   description   = "Build and deploy the website to the EKS Fargate cluster."
@@ -8,7 +13,7 @@ resource "aws_codebuild_project" "this" {
 
   source {
     type            = "GITHUB"
-    location        = var.repository_url
+    location        = nonsensitive(data.aws_ssm_parameter.repository_url.value)
     git_clone_depth = 1
     buildspec       = var.buildspec_path
 
@@ -79,6 +84,12 @@ resource "aws_codebuild_project" "this" {
     }
   }
 
+  lifecycle {
+    precondition {
+      condition     = data.aws_ssm_parameter.repository_url.type == "String" && can(regex("https://github\\.com/[^/[:space:]]+/[^/[:space:]]+/?$", nonsensitive(data.aws_ssm_parameter.repository_url.value)))
+      error_message = "SSM parameter /eks/video-platform-app must be a String containing a GitHub HTTPS repository URL."
+    }
+  }
 }
 
 resource "aws_codebuild_webhook" "this" {

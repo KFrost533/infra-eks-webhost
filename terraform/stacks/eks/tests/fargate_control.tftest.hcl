@@ -24,6 +24,12 @@ mock_provider "aws" {
       version = "v1.0.0-eksbuild.1"
     }
   }
+  mock_data "aws_ssm_parameter" {
+    defaults = {
+      type  = "String"
+      value = "https://github.com/example/project"
+    }
+  }
 }
 
 mock_provider "archive" {}
@@ -74,6 +80,10 @@ run "disabled_by_default" {
     condition     = length(module.fargate_control_monitoring) == 0
     error_message = "Control monitoring must be disabled when Fargate control is disabled."
   }
+  assert {
+    condition     = var.enable_github_webhook == null
+    error_message = "The EKS stack should use the CodeBuild module's webhook default."
+  }
 }
 
 run "enable_control" {
@@ -119,7 +129,7 @@ run "enable_control" {
   }
 
   assert {
-    condition     = var.enable_fargate_stop_schedule == false
+    condition     = var.enable_fargate_stop_schedule == null
     error_message = "The shutdown schedule must remain disabled until explicitly enabled."
   }
 
@@ -143,7 +153,6 @@ run "lambda_monitoring" {
   variables {
     function_name    = "project-fargate-control"
     log_group_name   = "/aws/lambda/project-fargate-control"
-    failure_pattern  = "\"FARGATE_CONTROL_FAILURE\""
     sns_topic_arn    = "arn:aws:sns:ap-southeast-1:123456789012:project-lambda-alerts"
     event_bus_name   = "project-fargate-control"
     event_rule_names = { stop = "project-fargate-stop", restore = "project-fargate-restore" }
@@ -191,10 +200,7 @@ run "managed_codebuild_image" {
   variables {
     project_name                = "project"
     aws_region                  = "ap-southeast-2"
-    repository_url              = "https://github.com/example/project"
     github_connection_arn       = "arn:aws:codeconnections:ap-southeast-2:123456789012:connection/test"
-    repository_branch           = "main"
-    buildspec_path              = "buildspec.yml"
     codebuild_role_arn          = "arn:aws:iam::123456789012:role/codebuild"
     vpc_id                      = "vpc-12345678"
     private_subnet_ids          = ["subnet-12345678"]
@@ -207,5 +213,112 @@ run "managed_codebuild_image" {
   assert {
     condition     = aws_codebuild_project.this.environment[0].image == "aws/codebuild/standard:7.0" && aws_codebuild_project.this.environment[0].image_pull_credentials_type == "CODEBUILD"
     error_message = "CodeBuild must use an AWS-managed image and CodeBuild credentials."
+  }
+  assert {
+    condition     = aws_codebuild_project.this.source[0].location == "https://github.com/example/project" && aws_codebuild_project.this.source_version == "main" && aws_codebuild_project.this.source[0].auth[0].type == "CODECONNECTIONS"
+    error_message = "CodeBuild must use the configured GitHub repository, branch, and connection."
+  }
+  assert {
+    condition     = length(aws_codebuild_webhook.this) == 1 && toset([for filter in one(aws_codebuild_webhook.this[0].filter_group).filter : "${filter.type}:${filter.pattern}"]) == toset(["EVENT:PUSH", "HEAD_REF:^refs/heads/main$"])
+    error_message = "The webhook must trigger only on pushes to main."
+  }
+}
+
+run "webhook_disabled" {
+  command = plan
+  module {
+    source = "../../modules/common/codebuild"
+  }
+  variables {
+    project_name                = "project"
+    aws_region                  = "ap-southeast-2"
+    github_connection_arn       = "arn:aws:codeconnections:ap-southeast-2:123456789012:connection/test"
+    repository_branch           = "main"
+    buildspec_path              = "buildspec.yml"
+    enable_github_webhook       = false
+    codebuild_role_arn          = "arn:aws:iam::123456789012:role/codebuild"
+    vpc_id                      = "vpc-12345678"
+    private_subnet_ids          = ["subnet-12345678"]
+    codebuild_security_group_id = "sg-12345678"
+    ecr_repository_url          = "123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/website"
+    eks_cluster_name            = "project"
+    cloudwatch_log_group_name   = "/aws/codebuild/project"
+  }
+
+  assert {
+    condition     = length(aws_codebuild_webhook.this) == 0
+    error_message = "The webhook must not be created when it is disabled."
+  }
+}
+
+run "invalid_codebuild_repository_url" {
+  command = plan
+  module {
+    source = "../../modules/common/codebuild"
+  }
+  variables {
+    project_name                = "project"
+    aws_region                  = "ap-southeast-2"
+    github_connection_arn       = "arn:aws:codeconnections:ap-southeast-2:123456789012:connection/test"
+    codebuild_role_arn          = "arn:aws:iam::123456789012:role/codebuild"
+    vpc_id                      = "vpc-12345678"
+    private_subnet_ids          = ["subnet-12345678"]
+    codebuild_security_group_id = "sg-12345678"
+    ecr_repository_url          = "123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/website"
+    eks_cluster_name            = "project"
+    cloudwatch_log_group_name   = "/aws/codebuild/project"
+  }
+  override_data {
+    target = data.aws_ssm_parameter.repository_url
+    values = {
+      type  = "String"
+      value = "not-a-github-url"
+    }
+  }
+
+  expect_failures = [aws_codebuild_project.this]
+}
+
+run "secure_codebuild_repository_url" {
+  command = plan
+  module {
+    source = "../../modules/common/codebuild"
+  }
+  variables {
+    project_name                = "project"
+    aws_region                  = "ap-southeast-2"
+    github_connection_arn       = "arn:aws:codeconnections:ap-southeast-2:123456789012:connection/test"
+    codebuild_role_arn          = "arn:aws:iam::123456789012:role/codebuild"
+    vpc_id                      = "vpc-12345678"
+    private_subnet_ids          = ["subnet-12345678"]
+    codebuild_security_group_id = "sg-12345678"
+    ecr_repository_url          = "123456789012.dkr.ecr.ap-southeast-2.amazonaws.com/website"
+    eks_cluster_name            = "project"
+    cloudwatch_log_group_name   = "/aws/codebuild/project"
+  }
+  override_data {
+    target = data.aws_ssm_parameter.repository_url
+    values = {
+      type  = "SecureString"
+      value = "https://github.com/example/project"
+    }
+  }
+
+  expect_failures = [aws_codebuild_project.this]
+}
+
+run "schedule_disabled_by_default" {
+  command = plan
+  module {
+    source = "../../modules/eks/fargate-control/eventbridge"
+  }
+  variables {
+    project_name       = "project"
+    stop_alias_arn     = "arn:aws:lambda:ap-southeast-2:123456789012:function:project:stop"
+    scheduler_role_arn = "arn:aws:iam::123456789012:role/scheduler"
+  }
+  assert {
+    condition     = aws_scheduler_schedule.stop.state == "DISABLED"
+    error_message = "The Fargate stop schedule must remain disabled by default."
   }
 }

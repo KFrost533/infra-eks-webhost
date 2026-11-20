@@ -64,7 +64,6 @@ module "codebuild" {
 
   project_name                = local.shared.project_name
   aws_region                  = "ap-southeast-2"
-  repository_url              = local.shared.website_repository_url
   github_connection_arn       = local.shared.github_connection_arn
   repository_branch           = var.website_repository_branch
   buildspec_path              = var.buildspec_path
@@ -130,7 +129,6 @@ module "fargate_control_monitoring" {
 
   function_name    = module.fargate_control[0].function_name
   log_group_name   = local.shared.fargate_control_log_group_name
-  failure_pattern  = "\"FARGATE_CONTROL_FAILURE\""
   sns_topic_arn    = local.shared.lambda_alerts_topic_arn
   event_bus_name   = module.fargate_control_bus[0].bus_name
   event_rule_names = module.fargate_control_bus[0].rule_names

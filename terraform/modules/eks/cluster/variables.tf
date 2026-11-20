@@ -6,6 +6,8 @@ variable "cluster_name" {
 variable "cluster_version" {
   description = "Kubernetes version for the EKS cluster."
   type        = string
+  default     = "1.36"
+  nullable    = false
 }
 
 variable "cluster_role_arn" {
@@ -31,6 +33,8 @@ variable "private_subnet_ids" {
 variable "cluster_public_access_cidrs" {
   description = "IPv4 CIDR blocks allowed to reach the public Kubernetes API endpoint."
   type        = list(string)
+  default     = []
+  nullable    = false
 }
 
 variable "codebuild_security_group_id" {

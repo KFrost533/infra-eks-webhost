@@ -9,6 +9,7 @@ variable "log_group_name" {
 variable "failure_pattern" {
   description = "CloudWatch Logs filter pattern for explicit application failures."
   type        = string
+  default     = "\"FARGATE_CONTROL_FAILURE\""
 }
 
 variable "sns_topic_arn" {

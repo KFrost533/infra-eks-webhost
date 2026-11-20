@@ -8,11 +8,6 @@ variable "aws_region" {
   type        = string
 }
 
-variable "repository_url" {
-  description = "GitHub HTTPS URL for the website source."
-  type        = string
-}
-
 variable "github_connection_arn" {
   description = "GitHub CodeConnections connection ARN."
   type        = string
@@ -21,23 +16,34 @@ variable "github_connection_arn" {
 variable "repository_branch" {
   description = "Git branch CodeBuild uses as its source."
   type        = string
+  default     = "main"
+  nullable    = false
+
+  validation {
+    condition     = var.repository_branch == "main"
+    error_message = "The deployment webhook is restricted to the main branch."
+  }
 }
 
 variable "buildspec_path" {
   description = "Buildspec path relative to the repository root."
   type        = string
+  default     = "buildspec.yml"
+  nullable    = false
 }
 
 variable "enable_github_webhook" {
   description = "Enable push-triggered builds after the GitHub connection is authorized."
   type        = bool
-  default     = false
+  default     = true
+  nullable    = false
 }
 
 variable "enable_weekly_report" {
   description = "Whether CodeBuild deploys the weekly report CronJob."
   type        = bool
   default     = false
+  nullable    = false
 }
 
 variable "codebuild_role_arn" {

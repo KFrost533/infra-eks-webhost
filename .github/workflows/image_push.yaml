@@ -11,12 +11,23 @@ on:
         description: Source registry
         type: string
         default: ghcr.io:grafana:latest
+      target_tag:
+        description: Target image tag
+        type: string
+        default: latest
 
 jobs:
   image_push:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    continue-on-error: false
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Pull image from source registry
+        run: |
+          docker pull ${{ github.event.inputs.retrieval_from }}
+      - name: Tag image for target repository
+        run: |
+          docker tag ${{ github.event.inputs.retrieval_from }} ${{ github.event.inputs.target_repository }}:${{ github.event.inputs.target_tag }}
+      - name: Push image to target repository
+        run: |
+          docker push ${{ github.event.inputs.target_repository }}:${{ github.event.inputs.target_tag }}

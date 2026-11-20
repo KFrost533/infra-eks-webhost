@@ -42,4 +42,5 @@ output "eks_shared" {
     fargate_restore_role_arn       = try(module.fargate_control_iam[0].github_restore_role_arn, null)
     lambda_alerts_topic_arn        = try(module.lambda_alerts[0].topic_arn, null)
   }
+
 }
