@@ -58,6 +58,7 @@ override_data {
         github_connection_arn          = "arn:aws:codeconnections:ap-southeast-1:123456789012:connection/test"
         ecr_repository_arn             = "arn:aws:ecr:ap-southeast-1:123456789012:repository/website"
         ecr_repository_url             = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/website"
+        loki_bucket_arn                = "arn:aws:s3:::example-loki-logs"
         build_tools_repository_arn     = "arn:aws:ecr:ap-southeast-1:123456789012:repository/build-tools"
         build_tools_repository_url     = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/build-tools"
         fargate_control_role_arn       = null
@@ -112,6 +113,7 @@ run "enable_control" {
           github_connection_arn          = "arn:aws:codeconnections:ap-southeast-1:123456789012:connection/test"
           ecr_repository_arn             = "arn:aws:ecr:ap-southeast-1:123456789012:repository/website"
           ecr_repository_url             = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/website"
+          loki_bucket_arn                = "arn:aws:s3:::example-loki-logs"
           build_tools_repository_arn     = "arn:aws:ecr:ap-southeast-1:123456789012:repository/build-tools"
           build_tools_repository_url     = "123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/build-tools"
           fargate_control_role_arn       = "arn:aws:iam::123456789012:role/fargate-control"

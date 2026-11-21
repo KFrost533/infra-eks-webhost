@@ -1,0 +1,9 @@
+{{- if ne .Release.Namespace "monitoring" -}}
+{{- fail "Install the observability chart in the monitoring namespace." -}}
+{{- end -}}
+{{- $_ := required "Set grafana.image.registry to the private ECR registry." .Values.grafana.image.registry -}}
+{{- $_ := required "Set alloy.image.registry to the private ECR registry." .Values.alloy.image.registry -}}
+{{- $_ := required "Set loki.loki.image.registry to the private ECR registry." .Values.loki.loki.image.registry -}}
+{{- $_ := required "Set loki.loki.storage.bucketNames.chunks to the Loki bucket." .Values.loki.loki.storage.bucketNames.chunks -}}
+{{- $_ := required "Set loki.loki.storage.bucketNames.ruler to the Loki bucket." .Values.loki.loki.storage.bucketNames.ruler -}}
+{{- $_ := required "Set loki.serviceAccount.annotations.eks.amazonaws.com/role-arn to the Loki IAM role ARN." (index .Values.loki.serviceAccount.annotations "eks.amazonaws.com/role-arn") -}}

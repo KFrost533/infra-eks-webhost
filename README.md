@@ -190,6 +190,78 @@ New Fargate Pods will then send their container output to `/aws/eks/<cluster-nam
 
 Metrics Server provides current CPU and memory usage via `kubectl top pods`; it does not store history or create CloudWatch metrics or alarms. Historical Fargate Pod metrics and alerting still require a Fargate-compatible telemetry collector and separate configuration. The EKS control-plane log group does not replace Pod monitoring.
 
+### Loki, Grafana and Alloy
+
+The observability umbrella chart installs into the `monitoring` namespace,
+which has its own EKS Fargate profile. Alloy uses the Kubernetes API to read
+Pod logs and sends them to Loki; Grafana queries Loki. This is separate from
+the existing CloudWatch log router. Alloy has cluster-wide Pod log read access,
+uses one replica, and can miss logs during outages or after container rotation.
+It does not collect historical metrics.
+
+The main stack owns the encrypted, private Loki S3 bucket, so EKS destruction
+does not delete it. Positive-size objects transition to Glacier Instant
+Retrieval after 30 days and Deep Archive after 120 days, without automatic
+expiration. Zero-byte objects remain in S3 Standard. Deep Archive objects
+must be restored before access; old Loki queries and index compaction can fail
+while required objects are archived. S3 transition, storage, and restoration
+charges apply, especially for small objects. Keep separate backups and test
+restore procedures before relying on this archive.
+
+Loki uses one replica and ephemeral local storage for its WAL; an abrupt Pod
+loss can lose unflushed logs even though flushed data is in S3. Grafana's
+local database is also ephemeral: dashboards and user changes made in its UI
+are lost on Pod replacement. The Loki service has no authentication and must
+remain private. Grafana is exposed only through a ClusterIP service.
+
+Apply the main stack first, then the EKS stack, after reviewing both plans.
+The EKS stack creates the cluster OIDC provider and a Loki IAM role scoped to
+the bucket and `monitoring/loki` service account. If an OIDC provider for the
+cluster is already managed elsewhere, import or reconcile its ownership before
+applying. Review the CodeBuild IAM policy's `moved` block in the main plan.
+
+For image mirroring, apply the main stack's ECR push role changes and publish
+the `Image Push` workflow to `main`. The workflow uses the GitHub `ACCOUNT_ID`
+secret, the `infra-eks-webhost-ecr-push-role` role and `ap-southeast-2`. Its
+OIDC trust permits only this repository's `main` branch. In Actions, run it
+with a complete source image reference, an existing ECR repository name and
+the target tag. For example, use `grafana/alloy:v1.22.0`,
+`infra-eks-webhost-alloy` and `v1.22.0`. ECR tags are immutable; pushing an
+existing tag again fails. The current role grants broad ECR access to
+repositories in the configured account and region.
+
+Before deploying, mirror the following images to the existing private ECR
+repositories using the same tags: `grafana/grafana:12.3.1`,
+`grafana/loki:3.7.10`, and `grafana/alloy:v1.22.0`. Create the `monitoring`
+namespace and a Secret named `grafana-admin` containing `admin-user` and
+`admin-password` using a secure secret-management process; do not commit the
+credentials. Then, from the repository root:
+
+```powershell
+helm dependency build k8s\helm\grafana
+$shared = terraform -chdir=terraform\stacks\main output -json eks_shared | ConvertFrom-Json
+$role = terraform -chdir=terraform\stacks\eks output -raw loki_role_arn
+$registry = ($shared.ecr_repository_url -split '/')[0]
+$bucket = $shared.loki_bucket_name
+$project = $shared.project_name
+helm upgrade --install observability k8s\helm\grafana --namespace monitoring `
+  -f k8s\helm\loki\values.yaml -f k8s\helm\alloy\values.yaml `
+  --set-string "grafana.image.registry=$registry" `
+  --set-string "grafana.image.repository=$project-grafana" `
+  --set-string "loki.loki.image.registry=$registry" `
+  --set-string "loki.loki.image.repository=$project-loki" `
+  --set-string "alloy.image.registry=$registry" `
+  --set-string "alloy.image.repository=$project-alloy" `
+  --set-string "loki.loki.storage.s3.region=$($shared.aws_region)" `
+  --set-string "loki.loki.storage.bucketNames.chunks=$bucket" `
+  --set-string "loki.loki.storage.bucketNames.ruler=$bucket" `
+  --set-string "loki.serviceAccount.annotations.eks\.amazonaws\.com/role-arn=$role"
+```
+
+Check Pod readiness and Alloy/Loki logs, then access Grafana locally with
+`kubectl -n monitoring port-forward svc/grafana 3000:80`. Restoring the EKS
+cluster requires recreating its Loki IAM role and reinstalling the chart.
+
 To find the fixed outbound IP for a MongoDB network allowlist, run `terraform -chdir=terraform\stacks\eks output -raw nat_gateway_public_ip` from the repository root after applying. Allow that address on the MongoDB deployment when required. Do not put connection strings or credentials in Terraform variables, state, logs, or the container image.
 
 ## Scheduled Fargate stop and restore

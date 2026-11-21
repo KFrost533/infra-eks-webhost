@@ -71,6 +71,19 @@ resource "aws_eks_fargate_profile" "website" {
   depends_on = [aws_eks_fargate_profile.system]
 }
 
+resource "aws_eks_fargate_profile" "monitoring" {
+  cluster_name           = aws_eks_cluster.this.name
+  fargate_profile_name   = "monitoring"
+  pod_execution_role_arn = var.fargate_pod_execution_role_arn
+  subnet_ids             = var.private_subnet_ids
+
+  selector {
+    namespace = "monitoring"
+  }
+
+  depends_on = [aws_eks_fargate_profile.website]
+}
+
 // ==== Addons ====
 // coredns, metrics-server, vpc-cni, kube-proxy
 

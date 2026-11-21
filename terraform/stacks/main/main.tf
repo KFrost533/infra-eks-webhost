@@ -45,9 +45,14 @@ module "fargate_logs" {
 module "iam" {
   source = "../../modules/common/iam"
 
-  project_name          = var.project_name
-  cluster_name          = var.cluster_name
-  fargate_log_group_arn = module.fargate_logs.fargate_log_group_arn
+  project_name               = var.project_name
+  cluster_name               = var.cluster_name
+  fargate_log_group_arn      = module.fargate_logs.fargate_log_group_arn
+  cloudwatch_log_group_arn   = module.cloudwatch.codebuild_log_group_arn
+  github_connection_arn      = module.github_connection.arn
+  ecr_repository_arn         = module.ecr.repository_arn
+  build_tools_repository_arn = module.ecr.build_tools_repository_arn
+  eks_cluster_arn            = local.cluster_arn
 }
 
 module "fargate_control_iam" {
@@ -63,18 +68,6 @@ module "fargate_control_iam" {
   control_bus_arn          = "arn:${data.aws_partition.current.partition}:events:${var.aws_region}:${data.aws_caller_identity.current.account_id}:event-bus/${var.project_name}-fargate-control"
 }
 
-module "codebuild_policy" {
-  source = "../../modules/common/iam/codebuild"
-
-  project_name               = var.project_name
-  codebuild_role_name        = module.iam.codebuild_role_name
-  cloudwatch_log_group_arn   = module.cloudwatch.codebuild_log_group_arn
-  github_connection_arn      = module.github_connection.arn
-  ecr_repository_arn         = module.ecr.repository_arn
-  build_tools_repository_arn = module.ecr.build_tools_repository_arn
-  eks_cluster_arn            = local.cluster_arn
-}
-
 module "lambda_alerts" {
   count  = var.enable_fargate_control ? 1 : 0
   source = "../../modules/common/sns"
@@ -84,6 +77,12 @@ module "lambda_alerts" {
 
 module "ecr" {
   source = "../../modules/common/ecr"
+
+  project_name = var.project_name
+}
+
+module "loki_storage" {
+  source = "../../modules/common/s3"
 
   project_name = var.project_name
 }

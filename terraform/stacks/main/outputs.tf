@@ -35,6 +35,8 @@ output "eks_shared" {
     github_connection_arn          = module.github_connection.arn
     ecr_repository_arn             = module.ecr.repository_arn
     ecr_repository_url             = module.ecr.repository_url
+    loki_bucket_name               = module.loki_storage.bucket_name
+    loki_bucket_arn                = module.loki_storage.bucket_arn
     build_tools_repository_arn     = module.ecr.build_tools_repository_arn
     build_tools_repository_url     = module.ecr.build_tools_repository_url
     fargate_control_role_arn       = try(module.fargate_control_iam[0].function_role_arn, null)

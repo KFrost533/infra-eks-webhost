@@ -1,25 +1,15 @@
 apiVersion: v2
-name: website
-description: Website workload deployed to Amazon EKS Fargate
+name: observability
+description: Grafana, Loki and Alloy for EKS Fargate
 type: application
 version: 0.1.0
-appVersion: "0.1.0"
-loki: 
-  enabled: true
-  image:
-    repository: grafana/loki
-    tag: "2.4.1"
-    pullPolicy: IfNotPresent
-grafana:
-  enabled: true
-  image:
-    repository: grafana/grafana
-    tag: "8.3.3"
-    pullPolicy: IfNotPresent
-alloy:
-  enabled: true
-  image:
-    repository: grafana/alloy
-    tag: "1.0.0"
-    pullPolicy: IfNotPresent
-    # ECR Imageから取得する方式
+dependencies:
+  - name: grafana
+    version: 10.5.15
+    repository: https://grafana.github.io/helm-charts
+  - name: alloy
+    version: 1.16.0
+    repository: https://grafana.github.io/helm-charts
+  - name: loki
+    version: 21.4.2
+    repository: https://grafana-community.github.io/helm-charts

@@ -43,6 +43,11 @@ output "codebuild_project_name" {
   value       = module.codebuild.project_name
 }
 
+output "loki_role_arn" {
+  description = "IAM role ARN for the monitoring/loki service account."
+  value       = module.observability.loki_role_arn
+}
+
 output "github_connection_arn" {
   description = "GitHub CodeConnections ARN; authorize it in the AWS Console after creation."
   value       = local.shared.github_connection_arn

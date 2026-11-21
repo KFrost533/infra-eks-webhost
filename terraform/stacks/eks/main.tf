@@ -82,6 +82,14 @@ module "codebuild" {
   ]
 }
 
+module "observability" {
+  source = "../../modules/eks/observability/iam"
+
+  project_name    = local.shared.project_name
+  oidc_issuer_url = module.eks.oidc_issuer_url
+  bucket_arn      = local.shared.loki_bucket_arn
+}
+
 module "fargate_control_network" {
   count  = local.shared.enable_fargate_control ? 1 : 0
   source = "../../modules/eks/fargate-control/network"
