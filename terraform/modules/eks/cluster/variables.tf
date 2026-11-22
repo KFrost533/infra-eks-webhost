@@ -43,3 +43,10 @@ variable "codebuild_security_group_id" {
   description = "Security group ID for CodeBuild access to the private EKS API endpoint."
   type        = string
 }
+
+variable "function_role_arn" {
+  description = "Optional IAM role ARN for the Fargate control Lambda."
+  type        = string
+  default     = null
+  nullable    = true
+}

@@ -48,6 +48,9 @@ module "eks" {
   private_subnet_ids             = local.shared.private_subnet_ids
   cluster_public_access_cidrs    = var.cluster_admin_cidrs
   codebuild_security_group_id    = local.shared.codebuild_security_group_id
+  function_role_arn              = local.shared.fargate_control_role_arn
+
+  depends_on = [module.network]
 }
 
 module "network" {
@@ -74,14 +77,6 @@ module "fargate_control_network" {
   project_name              = local.shared.project_name
   vpc_id                    = local.shared.vpc_id
   cluster_security_group_id = module.eks.cluster_security_group_id
-}
-
-module "fargate_control_access" {
-  count  = local.shared.enable_fargate_control ? 1 : 0
-  source = "../../modules/eks/cluster/fargate_control"
-
-  cluster_name      = module.eks.cluster_name
-  function_role_arn = local.shared.fargate_control_role_arn
 }
 
 module "fargate_control" {
@@ -128,5 +123,5 @@ module "fargate_control_schedule" {
   stop_alias_arn     = module.fargate_control[0].stop_alias_arn
   scheduler_role_arn = local.shared.fargate_scheduler_role_arn
 
-  depends_on = [module.fargate_control_access]
+  depends_on = [module.eks]
 }

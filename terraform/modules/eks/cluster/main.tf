@@ -173,3 +173,12 @@ resource "aws_eks_access_policy_association" "codebuild" {
     aws_eks_fargate_profile.website
   ]
 }
+
+resource "aws_eks_access_entry" "function" {
+  count = var.function_role_arn == null ? 0 : 1
+
+  cluster_name      = var.cluster_name
+  principal_arn     = var.function_role_arn
+  type              = "STANDARD"
+  kubernetes_groups = ["fargate-control"]
+}

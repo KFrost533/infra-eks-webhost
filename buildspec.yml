@@ -38,6 +38,10 @@ phases:
           --password-stdin "$ecr_registry"
         unset ecr_password
 
+        aws eks wait cluster-active \
+          --region "$AWS_DEFAULT_REGION" \
+          --name "$CLUSTER_NAME"
+
         aws eks update-kubeconfig \
           --region "$AWS_DEFAULT_REGION" \
           --name "$CLUSTER_NAME"
