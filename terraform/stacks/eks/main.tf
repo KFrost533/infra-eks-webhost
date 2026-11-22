@@ -37,15 +37,6 @@ provider "aws" {
   }
 }
 
-module "network" {
-  source = "../../modules/common/network"
-
-  project_name = local.shared.project_name
-  environment  = local.shared.environment
-  vpc_cidr     = var.vpc_cidr
-  cluster_name = local.shared.cluster_name
-}
-
 module "eks" {
   source = "../../modules/eks/cluster"
 
@@ -54,32 +45,18 @@ module "eks" {
   cluster_role_arn               = local.shared.eks_cluster_role_arn
   fargate_pod_execution_role_arn = local.shared.fargate_pod_execution_role_arn
   codebuild_role_arn             = local.shared.codebuild_role_arn
-  private_subnet_ids             = module.network.private_subnet_ids
+  private_subnet_ids             = local.shared.private_subnet_ids
   cluster_public_access_cidrs    = var.cluster_admin_cidrs
-  codebuild_security_group_id    = module.network.codebuild_security_group_id
+  codebuild_security_group_id    = local.shared.codebuild_security_group_id
 }
 
-module "codebuild" {
-  source = "../../modules/common/codebuild"
+module "network" {
+  source = "../../modules/eks/network"
 
-  project_name                = local.shared.project_name
-  aws_region                  = "ap-southeast-2"
-  github_connection_arn       = local.shared.github_connection_arn
-  repository_branch           = var.website_repository_branch
-  buildspec_path              = var.buildspec_path
-  enable_github_webhook       = var.enable_github_webhook
-  enable_weekly_report        = var.enable_weekly_report
-  codebuild_role_arn          = local.shared.codebuild_role_arn
-  vpc_id                      = module.network.vpc_id
-  private_subnet_ids          = module.network.private_subnet_ids
-  codebuild_security_group_id = module.network.codebuild_security_group_id
-  ecr_repository_url          = local.shared.ecr_repository_url
-  eks_cluster_name            = module.eks.cluster_name
-  cloudwatch_log_group_name   = local.shared.codebuild_log_group_name
-
-  depends_on = [
-    module.eks
-  ]
+  project_name           = local.shared.project_name
+  environment            = local.shared.environment
+  public_subnet_id       = local.shared.public_subnet_ids[0]
+  private_route_table_id = local.shared.private_route_table_id
 }
 
 module "observability" {
@@ -95,7 +72,7 @@ module "fargate_control_network" {
   source = "../../modules/eks/fargate-control/network"
 
   project_name              = local.shared.project_name
-  vpc_id                    = module.network.vpc_id
+  vpc_id                    = local.shared.vpc_id
   cluster_security_group_id = module.eks.cluster_security_group_id
 }
 
@@ -113,7 +90,7 @@ module "fargate_control" {
 
   project_name       = local.shared.project_name
   cluster_name       = module.eks.cluster_name
-  private_subnet_ids = module.network.private_subnet_ids
+  private_subnet_ids = local.shared.private_subnet_ids
   function_role_arn  = local.shared.fargate_control_role_arn
   security_group_id  = module.fargate_control_network[0].security_group_id
 

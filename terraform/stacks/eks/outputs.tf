@@ -5,22 +5,22 @@ output "aws_region" {
 
 output "vpc_id" {
   description = "ID of the VPC."
-  value       = module.network.vpc_id
+  value       = local.shared.vpc_id
 }
 
 output "public_subnet_ids" {
   description = "Public subnet IDs for future internet-facing load balancers."
-  value       = module.network.public_subnet_ids
+  value       = local.shared.public_subnet_ids
 }
 
 output "private_subnet_ids" {
   description = "Private subnet IDs used by EKS Fargate and CodeBuild."
-  value       = module.network.private_subnet_ids
+  value       = local.shared.private_subnet_ids
 }
 
-output "nat_gateway_public_ip" {
+output "network_gateway_public_ip" {
   description = "Public IPv4 address used for outbound traffic from Fargate."
-  value       = module.network.nat_gateway_public_ip
+  value       = module.network.public_ip
 }
 
 output "eks_cluster_name" {
@@ -40,7 +40,7 @@ output "ecr_repository_url" {
 
 output "codebuild_project_name" {
   description = "CodeBuild project name."
-  value       = module.codebuild.project_name
+  value       = local.shared.codebuild_project_name
 }
 
 output "loki_role_arn" {
@@ -86,7 +86,7 @@ output "lambda_alerts_topic_arn" {
 
 output "ecr_endpoint_ids" {
   description = "VPC endpoint IDs used for private ECR access."
-  value       = module.network.ecr_endpoint_ids
+  value       = local.shared.ecr_endpoint_ids
 }
 
 output "fargate_logging_manifest" {

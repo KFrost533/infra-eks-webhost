@@ -31,7 +31,7 @@ run "github_ecr_push" {
     condition = (
       jsondecode(aws_iam_role.ecr_push.assume_role_policy).Statement[0].Action == "sts:AssumeRoleWithWebIdentity" &&
       jsondecode(aws_iam_role.ecr_push.assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:aud"] == "sts.amazonaws.com" &&
-      jsondecode(aws_iam_role.ecr_push.assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:sub"] == "repo:KFrost533/infra-eks-webhost:ref:refs/heads/main"
+      jsondecode(aws_iam_role.ecr_push.assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:sub"] == "repo:KFrost533@155362696/infra-eks-webhost@1458593226:ref:refs/heads/main"
     )
     error_message = "The ECR push role must trust only the repository's main branch through GitHub OIDC."
   }

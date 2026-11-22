@@ -1,6 +1,8 @@
 variable "cluster_name" {
-  description = "Name of the EKS cluster."
+  description = "Name shared by the EKS cluster and its supporting resources."
   type        = string
+  default     = "infra-eks-webhost"
+  nullable    = false
 }
 
 variable "cluster_version" {

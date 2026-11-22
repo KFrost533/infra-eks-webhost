@@ -64,21 +64,20 @@ resource "aws_ecr_lifecycle_policy" "build_tools" {
 }
 
 // Grafana ECR repository and lifecycle policy
-resource "aws_ecr_repository" "grafana" {
-  name                 = "${var.project_name}-grafana"
-  image_tag_mutability = "IMMUTABLE"
+data "aws_ecr_repository" "grafana" {
+  name = "${var.project_name}-grafana"
+}
 
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+removed {
+  from = aws_ecr_repository.grafana
 
-  encryption_configuration {
-    encryption_type = "AES256"
+  lifecycle {
+    destroy = false
   }
 }
 
 resource "aws_ecr_lifecycle_policy" "grafana" {
-  repository = aws_ecr_repository.grafana.name
+  repository = data.aws_ecr_repository.grafana.name
 
   policy = jsonencode({
     rules = [{
@@ -97,21 +96,20 @@ resource "aws_ecr_lifecycle_policy" "grafana" {
 }
 
 // Loki ECR repository and lifecycle policy
-resource "aws_ecr_repository" "loki" {
-  name                 = "${var.project_name}-loki"
-  image_tag_mutability = "IMMUTABLE"
+data "aws_ecr_repository" "loki" {
+  name = "${var.project_name}-loki"
+}
 
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+removed {
+  from = aws_ecr_repository.loki
 
-  encryption_configuration {
-    encryption_type = "AES256"
+  lifecycle {
+    destroy = false
   }
 }
 
 resource "aws_ecr_lifecycle_policy" "loki" {
-  repository = aws_ecr_repository.loki.name
+  repository = data.aws_ecr_repository.loki.name
 
   policy = jsonencode({
     rules = [{
@@ -130,21 +128,20 @@ resource "aws_ecr_lifecycle_policy" "loki" {
 }
 
 // Alloy ECR repository and lifecycle policy
-resource "aws_ecr_repository" "alloy" {
-  name                 = "${var.project_name}-alloy"
-  image_tag_mutability = "IMMUTABLE"
+data "aws_ecr_repository" "alloy" {
+  name = "${var.project_name}-alloy"
+}
 
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+removed {
+  from = aws_ecr_repository.alloy
 
-  encryption_configuration {
-    encryption_type = "AES256"
+  lifecycle {
+    destroy = false
   }
 }
 
 resource "aws_ecr_lifecycle_policy" "alloy" {
-  repository = aws_ecr_repository.alloy.name
+  repository = data.aws_ecr_repository.alloy.name
 
   policy = jsonencode({
     rules = [{

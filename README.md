@@ -9,7 +9,9 @@ The infrastructure is organised as local Terraform modules:
 
 The shared root in `terraform\stacks\main` and the EKS root in `terraform\stacks\eks` use separate
 Terraform states. Module directories group functionality, not resource lifetime:
-for example, `common/network` is created and destroyed by the EKS stack.
+The shared VPC, networking, and CodeBuild are retained by the main stack.
+The NAT gateway and its default route belong to the EKS stack, so EKS private
+egress is removed when that stack is destroyed.
 The Fargate control CloudWatch log module is managed by the main stack to
 retain logs when EKS is destroyed; its alarm module is managed by the EKS
 stack. Existing log groups are mapped to their new module addresses with
@@ -20,6 +22,20 @@ main stack. Defaults for EKS-only settings such as cluster version, VPC CIDR,
 and schedules live in their respective modules' `variables.tf` files. Set
 variables in the EKS stack's `terraform.tfvars` to override those defaults.
 EKS reads the main stack's `eks_shared` output from its local state file.
+
+Before applying the network and CodeBuild ownership changes to an existing
+environment, move their state before planning either stack:
+
+```powershell
+terraform -chdir=terraform\stacks\main state mv -state=..\eks\terraform.tfstate -state-out=terraform.tfstate module.network module.network
+terraform -chdir=terraform\stacks\main state mv -state=..\eks\terraform.tfstate -state-out=terraform.tfstate module.codebuild module.codebuild
+terraform -chdir=terraform\stacks\main state mv -state=terraform.tfstate -state-out=..\eks\terraform.tfstate module.network.aws_eip.nat module.network.aws_eip.this
+terraform -chdir=terraform\stacks\main state mv -state=terraform.tfstate -state-out=..\eks\terraform.tfstate module.network.aws_nat_gateway.this module.network.aws_nat_gateway.this
+```
+
+The private route-table default route changes from an inline route to a
+separate EKS-owned resource. Review the resulting plans for that route before
+applying either stack.
 
 The intended release flow is:
 
@@ -223,7 +239,9 @@ applying. Review the CodeBuild IAM policy's `moved` block in the main plan.
 For image mirroring, apply the main stack's ECR push role changes and publish
 the `Image Push` workflow to `main`. The workflow uses the GitHub `ACCOUNT_ID`
 secret, the `infra-eks-webhost-ecr-push-role` role and `ap-southeast-2`. Its
-OIDC trust permits only this repository's `main` branch. In Actions, run it
+OIDC trust permits only this repository's `main` branch using GitHub's
+immutable owner and repository IDs. If the OIDC subject format changes,
+update the trust policy before running the workflow. In Actions, run it
 with a complete source image reference, an existing ECR repository name and
 the target tag. For example, use `grafana/alloy:v1.22.0`,
 `infra-eks-webhost-alloy` and `v1.22.0`. ECR tags are immutable; pushing an
@@ -262,7 +280,7 @@ Check Pod readiness and Alloy/Loki logs, then access Grafana locally with
 `kubectl -n monitoring port-forward svc/grafana 3000:80`. Restoring the EKS
 cluster requires recreating its Loki IAM role and reinstalling the chart.
 
-To find the fixed outbound IP for a MongoDB network allowlist, run `terraform -chdir=terraform\stacks\eks output -raw nat_gateway_public_ip` from the repository root after applying. Allow that address on the MongoDB deployment when required. Do not put connection strings or credentials in Terraform variables, state, logs, or the container image.
+To find the fixed outbound IP for a MongoDB network allowlist, run `terraform -chdir=terraform\stacks\eks output -raw network_gateway_public_ip` from the repository root after applying. Allow that address on the MongoDB deployment when required. Do not put connection strings or credentials in Terraform variables, state, logs, or the container image.
 
 ## Scheduled Fargate stop and restore
 

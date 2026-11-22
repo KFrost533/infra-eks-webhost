@@ -22,6 +22,12 @@ variable "cluster_name" {
   default     = "infra-eks-webhost"
 }
 
+variable "vpc_cidr" {
+  description = "IPv4 CIDR block for the VPC."
+  type        = string
+  default     = null
+}
+
 variable "enable_fargate_control" {
   description = "Prepare the shared log group and enable Fargate control in the EKS stack."
   type        = bool
@@ -37,4 +43,33 @@ variable "website_repository_url" {
     condition     = can(regex("^https://github\\.com/[^/]+/[^/]+/?$", var.website_repository_url))
     error_message = "website_repository_url must be a GitHub HTTPS repository URL."
   }
+}
+
+variable "website_repository_branch" {
+  description = "Git branch CodeBuild uses as its source."
+  type        = string
+  default     = "main"
+
+  validation {
+    condition     = var.website_repository_branch == "main"
+    error_message = "The deployment webhook is restricted to the main branch."
+  }
+}
+
+variable "buildspec_path" {
+  description = "Buildspec path relative to the repository root."
+  type        = string
+  default     = "buildspec.yml"
+}
+
+variable "enable_github_webhook" {
+  description = "Enable GitHub push-triggered CodeBuild after authorizing the connection."
+  type        = bool
+  default     = true
+}
+
+variable "enable_weekly_report" {
+  description = "Enable the weekly SES report CronJob after its secrets and SES identity are configured."
+  type        = bool
+  default     = false
 }

@@ -13,6 +13,16 @@ output "github_connection_arn" {
   value       = module.github_connection.arn
 }
 
+output "codebuild_project_name" {
+  description = "CodeBuild project name."
+  value       = module.codebuild.project_name
+}
+
+output "vpc_id" {
+  description = "ID of the VPC."
+  value       = module.network.vpc_id
+}
+
 output "eks_shared" {
   description = "Shared resources required by the separately managed EKS stack."
   value = {
@@ -27,6 +37,13 @@ output "eks_shared" {
     fargate_pod_execution_role_arn = module.iam.fargate_pod_execution_role_arn
     codebuild_role_arn             = module.iam.codebuild_role_arn
     codebuild_role_name            = module.iam.codebuild_role_name
+    codebuild_project_name         = module.codebuild.project_name
+    vpc_id                         = module.network.vpc_id
+    public_subnet_ids              = module.network.public_subnet_ids
+    private_subnet_ids             = module.network.private_subnet_ids
+    codebuild_security_group_id    = module.network.codebuild_security_group_id
+    private_route_table_id         = module.network.private_route_table_id
+    ecr_endpoint_ids               = module.network.ecr_endpoint_ids
     github_oidc_provider_arn       = module.iam.github_oidc_provider_arn
     codebuild_log_group_arn        = module.cloudwatch.codebuild_log_group_arn
     codebuild_log_group_name       = module.cloudwatch.codebuild_log_group_name

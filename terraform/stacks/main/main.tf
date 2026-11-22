@@ -81,6 +81,15 @@ module "ecr" {
   project_name = var.project_name
 }
 
+module "network" {
+  source = "../../modules/common/network"
+
+  project_name = var.project_name
+  environment  = var.environment
+  vpc_cidr     = var.vpc_cidr
+  cluster_name = var.cluster_name
+}
+
 module "loki_storage" {
   source = "../../modules/common/s3"
 
@@ -91,4 +100,23 @@ module "github_connection" {
   source = "../../modules/common/github_connection"
 
   project_name = var.project_name
+}
+
+module "codebuild" {
+  source = "../../modules/common/codebuild"
+
+  project_name                = var.project_name
+  aws_region                  = var.aws_region
+  github_connection_arn       = module.github_connection.arn
+  repository_branch           = var.website_repository_branch
+  buildspec_path              = var.buildspec_path
+  enable_github_webhook       = var.enable_github_webhook
+  enable_weekly_report        = var.enable_weekly_report
+  codebuild_role_arn          = module.iam.codebuild_role_arn
+  vpc_id                      = module.network.vpc_id
+  private_subnet_ids          = module.network.private_subnet_ids
+  codebuild_security_group_id = module.network.codebuild_security_group_id
+  ecr_repository_url          = module.ecr.repository_url
+  eks_cluster_name            = var.cluster_name
+  cloudwatch_log_group_name   = module.cloudwatch.codebuild_log_group_name
 }

@@ -10,12 +10,12 @@ resource "aws_iam_role" "ecr_push" {
       Effect = "Allow"
       Principal = {
         Federated = data.aws_iam_openid_connect_provider.github.arn
-      }
+      },
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          "token.actions.githubusercontent.com:sub" = "repo:KFrost533/infra-eks-webhost:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:sub" = "repo:KFrost533@155362696/infra-eks-webhost@1458593226:ref:refs/heads/main"
         }
       }
     }]

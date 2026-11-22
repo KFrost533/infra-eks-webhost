@@ -52,18 +52,31 @@ variable "codebuild_role_arn" {
 }
 
 variable "vpc_id" {
-  description = "VPC ID for the CodeBuild network interface."
+  description = "Optional VPC ID for the CodeBuild network interface."
   type        = string
+  default     = null
 }
 
 variable "private_subnet_ids" {
-  description = "Private subnet IDs for the CodeBuild project."
+  description = "Private subnet IDs used when CodeBuild runs in a VPC."
   type        = list(string)
+  default     = null
+
+  validation {
+    condition     = var.vpc_id == null ? var.private_subnet_ids == null : length(var.private_subnet_ids) > 0
+    error_message = "private_subnet_ids must be set with vpc_id and omitted without it."
+  }
 }
 
 variable "codebuild_security_group_id" {
-  description = "Security group ID assigned to the CodeBuild build environment."
+  description = "Security group assigned when CodeBuild runs in a VPC."
   type        = string
+  default     = null
+
+  validation {
+    condition     = var.vpc_id == null ? var.codebuild_security_group_id == null : var.codebuild_security_group_id != null
+    error_message = "codebuild_security_group_id must be set with vpc_id and omitted without it."
+  }
 }
 
 variable "ecr_repository_url" {
@@ -72,7 +85,7 @@ variable "ecr_repository_url" {
 }
 
 variable "eks_cluster_name" {
-  description = "EKS cluster name passed to build commands."
+  description = "Name shared by the EKS cluster and its supporting resources."
   type        = string
 }
 

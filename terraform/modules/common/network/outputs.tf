@@ -13,9 +13,9 @@ output "private_subnet_ids" {
   value       = aws_subnet.private[*].id
 }
 
-output "nat_gateway_public_ip" {
-  description = "Public IPv4 address used by private workloads for internet egress."
-  value       = aws_eip.nat.public_ip
+output "private_route_table_id" {
+  description = "Private subnet route table identifier."
+  value       = aws_route_table.private.id
 }
 
 output "codebuild_security_group_id" {

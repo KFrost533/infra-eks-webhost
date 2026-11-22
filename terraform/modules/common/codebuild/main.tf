@@ -67,10 +67,14 @@ resource "aws_codebuild_project" "this" {
     }
   }
 
-  vpc_config {
-    vpc_id             = var.vpc_id
-    subnets            = var.private_subnet_ids
-    security_group_ids = [var.codebuild_security_group_id]
+  dynamic "vpc_config" {
+    for_each = var.vpc_id == null ? [] : [var.vpc_id]
+
+    content {
+      vpc_id             = var.vpc_id
+      subnets            = var.private_subnet_ids
+      security_group_ids = [var.codebuild_security_group_id]
+    }
   }
 
   logs_config {
