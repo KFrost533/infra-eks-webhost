@@ -1,5 +1,7 @@
 # EKS Website Hosting
 
+[日本語版](README_JP.md)
+
 The infrastructure is organised as local Terraform modules:
 
 | Module | Responsibility |
@@ -7,21 +9,25 @@ The infrastructure is organised as local Terraform modules:
 | `eks` | EKS cluster, Fargate profiles, add-ons and optional Fargate control |
 | `common` | Networking, IAM, log groups, ECR, CodeBuild, GitHub connection and alerts |
 
-The shared root in `terraform\stacks\main` and the EKS root in `terraform\stacks\eks` use separate
-Terraform states. Module directories group functionality, not resource lifetime:
-The shared VPC, networking, and CodeBuild are retained by the main stack.
-The NAT gateway and its default route belong to the EKS stack, so EKS private
-egress is removed when that stack is destroyed.
-The Fargate control CloudWatch log module is managed by the main stack to
-retain logs when EKS is destroyed; its alarm module is managed by the EKS
-stack. Existing log groups are mapped to their new module addresses with
-Terraform `moved` blocks; review the plan before applying.
+The shared root in `terraform\stacks\main` and the EKS root in
+`terraform\stacks\eks` use separate Terraform states. Module directories group
+functionality, not resource lifetime.
 
-Shared configuration (region, project and cluster name) is defined in the
-main stack. Defaults for EKS-only settings such as cluster version, VPC CIDR,
-and schedules live in their respective modules' `variables.tf` files. Set
-variables in the EKS stack's `terraform.tfvars` to override those defaults.
-EKS reads the main stack's `eks_shared` output from its local state file.
+| Resource | Owning stack | Behaviour when EKS is destroyed |
+|---|---|---|
+| Shared VPC, networking and CodeBuild | `main` | Retained by the main stack |
+| NAT Gateway and default route | `eks` | Private egress is removed |
+| Fargate control CloudWatch logs | `main` | Retained after EKS destruction |
+| Fargate control alarms | `eks` | Removed with the EKS stack |
+
+Existing log groups are mapped to their new module addresses with Terraform
+`moved` blocks; review the plan before applying.
+
+| Setting type | Defined in | Override location |
+|---|---|---|
+| Region, project and cluster name | `main` stack | `terraform\stacks\main\terraform.tfvars` |
+| EKS-only defaults such as version, VPC CIDR and schedules | Each module's `variables.tf` | `terraform\stacks\eks\terraform.tfvars` |
+| Shared values consumed by EKS | `main` stack's `eks_shared` output | Main stack's local state file |
 
 Before applying the network and CodeBuild ownership changes to an existing
 environment, move their state before planning either stack:
@@ -47,20 +53,27 @@ This design uses Fargate; it does not create EC2 worker nodes.
 
 ## Network and egress
 
-- Public and private subnets span two Availability Zones.
-- Public subnets and an Internet Gateway are reserved for an internet-facing Application Load Balancer.
-- Both private subnets route internet traffic through one NAT Gateway in the first public subnet.
-- ECR API and Docker interface endpoints plus an S3 gateway endpoint let CodeBuild and Fargate push/pull private ECR images without NAT.
-- CloudWatch Logs, STS, EC2, and Elastic Load Balancing interface endpoints support private AWS API access.
-- Fargate backend connections to a public MongoDB deployment use the NAT Gateway's static public IP. MongoDB commonly uses TCP 27017, not HTTPS; allow the deployment's required ports and DNS access. Browser-side calls originate from the visitor's browser and do not traverse the VPC. CodeBuild can access public TCP port 443 through NAT to download the Node.js base image and npm dependencies; this permits HTTPS to any public destination, not just package registries.
-- The NAT Gateway is a single-AZ dependency; an outage in that AZ interrupts egress from both private subnets.
-- The public EKS API endpoint is disabled unless `cluster_admin_cidrs` is set. CodeBuild reaches the private EKS API from the VPC.
+| Item | Design | Notes |
+|---|---|---|
+| Subnets | Public and private subnets across two Availability Zones | Public subnets are reserved for an internet-facing ALB |
+| Egress | One NAT Gateway in the first public subnet | A failure in that AZ interrupts both private subnets |
+| ECR traffic | API/Docker interface endpoints plus an S3 gateway endpoint | CodeBuild and Fargate push/pull without NAT |
+| AWS APIs | CloudWatch Logs, STS, EC2 and ELB interface endpoints | Private API access |
+| MongoDB | Fargate connects through the NAT Gateway's static IP | Usually requires TCP 27017 and DNS |
+| Browser traffic | Originates from the visitor's browser | Does not traverse the VPC |
+| CodeBuild public traffic | TCP 443 through NAT | Permits any public HTTPS destination, not only package registries |
+| EKS API | Private by default | Public access requires `cluster_admin_cidrs` |
 
 The public network is prepared, but the AWS Load Balancer Controller and the public ALB are not installed yet. The Helm chart's Ingress is disabled by default.
 
 ## Provision infrastructure
 
-Prerequisites: Terraform 1.5.7+, AWS CLI credentials, Docker, and permissions to create VPC, EKS, IAM, ECR, CodeBuild, CodeConnections, and CloudWatch resources.
+| Prerequisite | Requirement |
+|---|---|
+| Terraform | 1.5.7 or later |
+| AWS | AWS CLI credentials |
+| Containers | Docker |
+| IAM permissions | Permission to create VPC, EKS, IAM, ECR, CodeBuild, CodeConnections and CloudWatch resources |
 
 **Existing deployments:** do not apply either root until state has been migrated
 as described below. Otherwise Terraform may plan deletion or duplicate creation.
@@ -73,9 +86,14 @@ Copy-Item terraform\stacks\eks\terraform.tfvars.example terraform\stacks\eks\ter
 ```
 
 Replace `YOUR_PUBLIC_IP/32` in `terraform\stacks\eks\terraform.tfvars` with the
-operator's public IPv4 CIDR. The shared root creates ECR, the GitHub connection,
-IAM roles, CodeBuild policy and log groups, plus Fargate control IAM and SNS
-when enabled; it does not create EKS, VPC, NAT or the CodeBuild project.
+operator's public IPv4 CIDR.
+
+| Resource | `main` stack | `eks` stack |
+|---|:---:|:---:|
+| ECR, GitHub connection, shared IAM, CodeBuild policy and log groups | Creates | — |
+| Fargate control IAM and SNS | Creates when enabled | — |
+| EKS, VPC, NAT and CodeBuild project | Does not create | Creates |
+
 The CodeBuild module reads its repository URL from the existing SSM Parameter
 Store `String` parameter `/eks/video-platform-app` in the EKS stack's AWS
 region. It must contain a GitHub HTTPS repository URL; the Terraform caller
@@ -122,12 +140,14 @@ the logs in it; review this change and its impact on the running EKS stack.
 
 ### Remove and recreate EKS
 
-To stop EKS and NAT charges, review
-`terraform -chdir=terraform\stacks\eks plan -destroy`, then run
-`terraform -chdir=terraform\stacks\eks destroy`. This destroys the cluster, VPC,
-NAT, endpoints, CodeBuild project, Lambda, EventBridge and CloudWatch alarms,
-**not** the shared IAM, SNS topic and email subscription. EKS does not support
-pausing its control plane or NAT Gateway.
+EKS does not support pausing its control plane or NAT Gateway.
+
+| Action | Command or effect |
+|---|---|
+| Review the destroy plan | `terraform -chdir=terraform\stacks\eks plan -destroy` |
+| Destroy the EKS stack | `terraform -chdir=terraform\stacks\eks destroy` |
+| Removed | Cluster, VPC, NAT, endpoints, CodeBuild, Lambda, EventBridge and CloudWatch alarms |
+| Retained | Shared IAM, SNS topic and email subscription |
 Delete any externally managed load balancers or other dependent resources as
 necessary; they may prevent VPC deletion or continue to incur charges.
 
@@ -167,9 +187,16 @@ module.fargate_control_monitoring
 module.fargate_control_schedule
 ```
 
-Leave `module.ecr`, `module.iam`, `module.cloudwatch`,
-`module.github_connection`, `module.codebuild_policy`,
-`module.fargate_control_iam`, and `module.lambda_alerts` in the shared state.
+| Modules retained in the shared state |
+|---|
+| `module.ecr` |
+| `module.iam` |
+| `module.cloudwatch` |
+| `module.github_connection` |
+| `module.codebuild_policy` |
+| `module.fargate_control_iam` |
+| `module.lambda_alerts` |
+
 Each state move changes files
 immediately; stop and inspect both states if one fails. Refresh the shared
 outputs and inspect **both** plans before any apply: no existing resource
@@ -204,25 +231,40 @@ terraform -chdir=terraform\stacks\eks output -raw fargate_logging_manifest | kub
 
 New Fargate Pods will then send their container output to `/aws/eks/<cluster-name>/fargate`. Existing Pods must be restarted to pick up the router configuration. Avoid writing secrets or personal data to application logs.
 
-Metrics Server provides current CPU and memory usage via `kubectl top pods`; it does not store history or create CloudWatch metrics or alarms. Historical Fargate Pod metrics and alerting still require a Fargate-compatible telemetry collector and separate configuration. The EKS control-plane log group does not replace Pod monitoring.
+| Monitoring target | Provides | Does not provide |
+|---|---|---|
+| Metrics Server | Current CPU and memory through `kubectl top pods` | History, CloudWatch metrics or alarms |
+| EKS control-plane logs | Control-plane logging | A replacement for Pod monitoring |
+| Fargate-compatible telemetry collector | Historical metrics and alerting when configured separately | Included deployment in this stack |
 
 ### Loki, Grafana and Alloy
 
 The observability umbrella chart installs into the `monitoring` namespace,
 which has its own EKS Fargate profile. Alloy uses the Kubernetes API to read
 Pod logs and sends them to Loki; Grafana queries Loki. This is separate from
-the existing CloudWatch log router. Alloy has cluster-wide Pod log read access,
-uses one replica, and can miss logs during outages or after container rotation.
-It does not collect historical metrics.
+the existing CloudWatch log router.
+
+| Component | Role | Limitation |
+|---|---|---|
+| Alloy | Reads Pod logs through the Kubernetes API and sends them to Loki | One replica; logs can be missed during outages or rotation |
+| Loki | Stores searchable logs in S3 | No built-in service authentication; must remain private |
+| Grafana | Visualises Loki data | ClusterIP only; its local database is ephemeral |
+| Metrics | — | Historical metrics are not collected |
 
 The main stack owns the encrypted, private Loki S3 bucket, so EKS destruction
-does not delete it. Positive-size objects transition to Glacier Instant
-Retrieval after 30 days and Deep Archive after 120 days, without automatic
-expiration. Zero-byte objects remain in S3 Standard. Deep Archive objects
-must be restored before access; old Loki queries and index compaction can fail
-while required objects are archived. S3 transition, storage, and restoration
-charges apply, especially for small objects. Keep separate backups and test
-restore procedures before relying on this archive.
+does not delete it.
+
+| Object state | Storage class | Notes |
+|---|---|---|
+| First 30 days | S3 Standard | Immediately accessible |
+| After 30 days | Glacier Instant Retrieval | Transition and storage charges apply |
+| After 120 days | Deep Archive | Must be restored before access |
+| Zero-byte object | S3 Standard | No lifecycle transition |
+| Expiration | Disabled | No automatic deletion; retain separate backups |
+
+Old Loki queries and index compaction can fail while required objects are
+archived. Transition, storage and restoration charges apply, especially for
+small objects. Test restore procedures before relying on this archive.
 
 Loki uses one replica and ephemeral local storage for its WAL; an abrupt Pod
 loss can lose unflushed logs even though flushed data is in S3. Grafana's
@@ -248,9 +290,14 @@ the target tag. For example, use `grafana/alloy:v1.22.0`,
 existing tag again fails. The current role grants broad ECR access to
 repositories in the configured account and region.
 
-Before deploying, mirror the following images to the existing private ECR
-repositories using the same tags: `grafana/grafana:12.3.1`,
-`grafana/loki:3.7.10`, and `grafana/alloy:v1.22.0`. Create the `monitoring`
+| Component | Source image |
+|---|---|
+| Grafana | `grafana/grafana:12.3.1` |
+| Loki | `grafana/loki:3.7.10` |
+| Alloy | `grafana/alloy:v1.22.0` |
+
+Before deploying, mirror these images to the existing private ECR repositories
+using the same tags. Create the `monitoring`
 namespace and a Secret named `grafana-admin` containing `admin-user` and
 `admin-password` using a secure secret-management process; do not commit the
 credentials. Then, from the repository root:
@@ -284,7 +331,24 @@ To find the fixed outbound IP for a MongoDB network allowlist, run `terraform -c
 
 ## Scheduled Fargate stop and restore
 
-The optional Lambda discovers **all** Fargate profile selectors, suspends matching CronJobs, scales matching Deployments and StatefulSets to zero, deletes matching unfinished Jobs and Pods, and waits for Fargate nodes to disappear. This includes CoreDNS, Metrics Server and website workloads. Website access, cluster DNS, monitoring, and scheduled jobs stop; jobs interrupted by the stop are not resumed. The EKS control plane, NAT Gateway, endpoints and other resources continue to incur charges. Newly created Pods, autoscalers, deployments or add-on reconciliation can recreate workloads; keep automatic deployments and scaling disabled during the stopped period. The Lambda fails if matching Pods or Fargate nodes remain after its wait.
+The optional Lambda discovers **all** Fargate profile selectors and processes
+matching resources.
+
+| Resource | Stop behaviour | Restore behaviour |
+|---|---|---|
+| CronJob | Saves suspension state and suspends it | Restores the previous state |
+| Deployment / StatefulSet | Saves replicas and scales to zero | Restores replicas, including an original value of zero |
+| Unfinished Job | Deletes it | Does not recreate it |
+| Pod | Deletes it | Does not recreate it |
+| Fargate node | Waits for it to disappear | Workload restoration can create a new node |
+
+This includes CoreDNS, Metrics Server and website workloads. Website access,
+cluster DNS, monitoring and scheduled jobs stop; jobs interrupted by the stop
+are not resumed. The EKS control plane, NAT Gateway, endpoints and other
+resources continue to incur charges. Newly created Pods, autoscalers,
+deployments or add-on reconciliation can recreate workloads; keep automatic
+deployments and scaling disabled during the stopped period. The Lambda fails if
+matching Pods or Fargate nodes remain after its wait.
 
 The previous replica count and CronJob suspend state are stored in annotations on each resource when it is stopped. The restore action restores those settings, including an original replica count of zero or an already-suspended CronJob. It does **not** recreate deleted Jobs, standalone Pods, or resources deleted or replaced while stopped. Do not remove the `fargate-control.kfrost533.dev/previous-state` annotations or run Helm upgrades while stopped. Restore requests do not wait for application or DNS readiness; check the cluster afterward.
 
@@ -309,13 +373,41 @@ To configure:
 
 GitHub Actions confirms only that EventBridge accepted the request, not that it matched a rule or that Lambda completed. Check the request ID in `/aws/lambda/<project>-fargate-control` logs for `FARGATE_CONTROL_SUCCESS` or `FARGATE_CONTROL_FAILURE`. Check workload readiness separately. EventBridge and Lambda deliver asynchronously and can duplicate or delay events; avoid overlapping stop/start requests and verify the outcome before issuing another. Retries are disabled and event age is limited to 60 seconds, but ordering and exactly-once execution are not guaranteed. Verify the configured bus name: EventBridge can accept an event addressed to a nonexistent bus without delivering it.
 
-The reusable Lambda monitoring module sends SNS notifications via a composite alarm: a CloudWatch Logs metric filter detects the function's explicit failure marker, while Lambda `Errors`, `Throttles`, and `AsyncEventsDropped` metrics cover failures including timeouts and dropped asynchronous invocations. EventBridge rule `FailedInvocations` alarms cover failed delivery to Lambda. Scheduler delivery failures before Lambda invocation are not covered by these alarms. CloudWatch/EventBridge metrics and delivery are not a guaranteed audit trail; inspect logs and verify results. The composite sends a notification on transition to ALARM, not for each failure while it remains in ALARM. Additional log metrics, alarms, SNS notifications and EventBridge usage may incur charges. To monitor another Lambda, instantiate the monitoring module with its log group, failure filter pattern and topic; no other Lambda functions are configured here.
+The reusable Lambda monitoring module sends SNS notifications via a composite alarm.
+
+| Monitoring source | Detects |
+|---|---|
+| CloudWatch Logs metric filter | Explicit function failure marker |
+| Lambda `Errors` | Function errors and timeouts |
+| Lambda `Throttles` | Throttling |
+| Lambda `AsyncEventsDropped` | Dropped asynchronous events |
+| EventBridge `FailedInvocations` | Failed delivery to Lambda |
+| EventBridge Scheduler | Delivery failures before Lambda invocation are not covered |
+
+CloudWatch/EventBridge metrics and delivery are not a guaranteed audit trail;
+inspect logs and verify results. The composite sends a notification on
+transition to ALARM, not for each failure while it remains in ALARM. Additional
+log metrics, alarms, SNS notifications and EventBridge usage may incur charges.
+To monitor another Lambda, instantiate the monitoring module with its log group,
+failure filter pattern and topic; no other Lambda functions are configured here.
 
 ## Weekly YouTube CSV email
 
-The optional EKS CronJob emails a CSV of **all saved YouTube search-result rows** every Monday at 09:00 `Asia/Tokyo`. It does not run a new YouTube search or deduplicate results from different searches. It runs separately from the existing daily search scheduler, which is unchanged. The job requires the cluster, MongoDB and SES SMTP endpoint to be reachable at the scheduled time.
+| Item | Value |
+|---|---|
+| Schedule | Every Monday at 09:00 `Asia/Tokyo` |
+| Scope | All saved YouTube search-result rows |
+| Output | UTF-8 CSV with BOM |
+| Limit | 6 MiB attachment |
+| Search | Does not run a new search |
+| Deduplication | Not performed across searches |
+| Daily search scheduler | Unchanged and runs separately |
+| Required connectivity | MongoDB, SES SMTP, DNS and TCP 587 |
 
-The CSV is UTF-8 with a BOM and contains date, keyword, video ID, title, URL, channel and publication date. Spreadsheet formula-like values are escaped. The attachment is limited to 6 MiB to leave room for MIME encoding within the SES SMTP message limit. If the full CSV exceeds that limit, the job fails without sending a partial report.
+The CSV contains date, keyword, video ID, title, URL, channel and publication
+date. Spreadsheet formula-like values are escaped. The attachment limit leaves
+room for MIME encoding within the SES SMTP message limit. If the full CSV
+exceeds the limit, the job fails without sending a partial report.
 
 Before enabling it:
 
@@ -347,19 +439,38 @@ application, buildspec and chart must be present in that repository; review all
 staged files before pushing. Ignore files are not a substitute for checking
 for secrets and private data.
 
-The CodeBuild project uses the AWS-managed `aws/codebuild/standard:7.0`
-image. During each build it downloads Helm 3.17.3 from `get.helm.sh` and
-verifies its pinned SHA-256 hash, so builds require outbound HTTPS access.
-The existing build-tools ECR repository and lifecycle policy remain managed by
-the main stack for retention, but CodeBuild no longer uses their image.
-The CodeBuild role retains permission to pull that image so an existing
+| CI item | Configuration |
+|---|---|
+| CodeBuild image | `aws/codebuild/standard:7.0` |
+| Helm | 3.17.3 |
+| Download source | `get.helm.sh` |
+| Integrity check | Pinned SHA-256 hash |
+| Required outbound traffic | HTTPS |
+| Existing build-tools ECR | Retained by the main stack but no longer used by CodeBuild |
+
+The CodeBuild role retains permission to pull the old image so an existing
 project continues to work until the EKS stack is updated.
 
-1. Authorise the pending GitHub CodeConnections connection in the AWS Console, grant the GitHub App access to the repository, and approve its webhook permissions.
-2. Configure the Fargate log router and create the `website` namespace using an administrator kubeconfig. The CodeBuild role is intentionally limited to editing resources in that namespace.
-3. Configure MongoDB access and backups, and provision a Kubernetes Secret named `website-secrets` in the `website` namespace with keys `ACCESS_MONGODB_URI` and `API_KEY_ENCRYPTION_KEY`. Use a secure secret-management process; do not commit values or put them in Helm values or Terraform state. Keep the encryption key stable.
-4. After the application and deployment are verified, enable `enable_github_webhook` if it was disabled, review the EKS plan, and apply it. Each push to `main` triggers a build and deployment. Set it to `false` and apply to stop the webhook.
+| Step | Action |
+|---:|---|
+| 1 | Authorise the pending GitHub CodeConnections connection and approve repository and webhook access |
+| 2 | Configure the Fargate log router and create the `website` namespace with an administrator kubeconfig |
+| 3 | Configure MongoDB and safely provision `website-secrets` with `ACCESS_MONGODB_URI` and `API_KEY_ENCRYPTION_KEY` |
+| 4 | After verification, enable `enable_github_webhook` and apply the reviewed EKS plan |
+
+The CodeBuild role is intentionally limited to editing resources in the
+`website` namespace. Do not commit Secret values or put them in Helm values or
+Terraform state. Keep the encryption key stable. Each push to `main` triggers a
+build and deployment. Set the webhook variable to `false` and apply to stop it.
 
 The buildspec builds and pushes an image tagged with the source commit and unique build ID, then runs `helm upgrade --install`. Concurrent builds or retries can deploy an older commit after a newer one. A CodeBuild project concurrency limit of one is not a queue: additional builds are rejected while one runs. Design and verify deployment ordering and retry handling before enabling automated releases. The Helm chart deploys to Fargate Pods. Public access requires the AWS Load Balancer Controller to be installed and the chart Ingress enabled after the controller is ready.
 
-The application connects directly to MongoDB with Mongoose; existing SQLite data is not imported. The chart requires the Secret before Pods can start. Test connectivity, permissions, backup and recovery before deployment. Monitor MongoDB connection counts and errors, and tune connection pools only after observing workload and capacity. The application and its administrative endpoints should not be publicly exposed without an appropriate authentication design.
+| Application check | State or requirement |
+|---|---|
+| Database | Direct MongoDB access through Mongoose |
+| SQLite migration | Existing data is not imported |
+| Pod startup | Secret must exist first |
+| Pre-deployment checks | Connectivity, permissions, backup and recovery |
+| Operational monitoring | MongoDB connection count and errors |
+| Pool tuning | Only after observing workload and capacity |
+| Exposure | Do not expose the application or admin endpoints without authentication |
